@@ -459,6 +459,73 @@ After running the QueryBuilder:
 
 ---
 
+## 🏗️ **Medallion Architecture Pipeline**
+
+This project implements a complete **Bronze → Silver → Gold** medallion architecture for medical data processing:
+
+### **🥉 Bronze Layer** (Raw Data)
+- **Script**: `querybuilder.py`
+- **Schema**: `bronze.collection_disease` 
+- **Purpose**: Extract raw clinical data from MIMIC-IV
+- **Data**: Unprocessed chartevents and labevents
+- **Runner**: `./run_bronze.sh`
+
+### **🥈 Silver Layer** (Standardized Data)
+- **Script**: `standardize_data.py`
+- **Schema**: `silver.collection_disease_std`
+- **Purpose**: Clean, standardize, and validate Bronze data
+- **Features**:
+  - ✅ Unit standardization with OMOP concepts
+  - ✅ Outlier detection and flagging
+  - ✅ Duplicate resolution
+  - ✅ Data quality validation
+- **Runner**: `./run_silver.sh`
+
+### **🥇 Gold Layer** (Analytics & BI)
+- **Script**: `gold_analytics.py`
+- **Schema**: `gold.*` (multiple analytical views)
+- **Purpose**: Create business intelligence and analytical aggregations
+- **Views Created**:
+  - 📊 `gold.patient_summaries` - Patient-level metrics
+  - 📈 `gold.clinical_indicators` - Parameter statistics & quality
+  - 📅 `gold.daily_trends` - Daily aggregated trends
+  - ⏰ `gold.hourly_patterns` - Hourly measurement patterns
+  - 🔍 `gold.data_quality_summary` - Quality dashboard
+- **Runner**: `./run_gold.sh`
+
+### **🚀 Complete Pipeline**
+Run the entire medallion architecture:
+```bash
+# Complete pipeline (Bronze → Silver → Gold)
+./run_pipeline.sh
+
+# Or run individual layers
+./run_bronze.sh    # Extract raw data
+./run_silver.sh    # Standardize data  
+./run_gold.sh      # Create analytics
+```
+
+### **📊 Example Gold Layer Queries**
+```sql
+-- Top patients by measurement volume
+SELECT subject_id, total_measurements, avg_heart_rate, avg_spo2 
+FROM gold.patient_summaries 
+ORDER BY total_measurements DESC LIMIT 10;
+
+-- Parameter quality overview
+SELECT concept_name, total_measurements, outlier_percentage, conversion_percentage
+FROM gold.clinical_indicators
+ORDER BY total_measurements DESC;
+
+-- Recent trends
+SELECT measurement_date, concept_name, daily_avg, daily_outliers
+FROM gold.daily_trends 
+WHERE measurement_date >= CURRENT_DATE - 7
+ORDER BY measurement_date DESC;
+```
+
+---
+
 **🎯 Ready to extract medical data for Acute Respiratory Failure analysis!**
 
 *For questions or issues, check the log files and troubleshooting section above.*
