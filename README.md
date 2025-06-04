@@ -27,8 +27,8 @@ This QueryBuilder extracts clinical parameters associated with **Acute Respirato
 git clone https://github.com/yourusername/MDS_Schema.git
 cd MDS_Schema
 
-# Run the automated setup script
-./setup_test.sh
+# Run the complete medallion architecture setup
+./setup.sh
 ```
 
 The setup script will:
@@ -36,9 +36,19 @@ The setup script will:
 2. ✅ Install Python dependencies
 3. ✅ Set up database configuration
 4. ✅ Test database connection
-5. ✅ Extract medical data (if needed)
-6. ✅ Validate data quality
-7. ✅ Run comprehensive tests
+5. ✅ Extract Bronze layer (raw medical data)
+6. ✅ Process Silver layer (standardized data)
+7. ✅ Validate complete pipeline
+8. ✅ Generate quality reports
+
+### **Setup Options**
+```bash
+./setup.sh           # Complete setup (Bronze + Silver) [DEFAULT]
+./setup.sh bronze    # Bronze layer only (raw data extraction)
+./setup.sh silver    # Silver layer only (requires Bronze data)
+./setup.sh test      # Quick test of existing pipeline
+./setup.sh help      # Show help and options
+```
 
 ### **Manual Setup**
 If you prefer manual setup:
@@ -55,9 +65,9 @@ pip install -r requirements.txt
 cp config_template.py config_local.py
 # Edit config_local.py with your credentials
 
-# 4. Test connection and run extraction
-python test_db.py
-python querybuilder.py
+# 4. Run Bronze and Silver layers
+python querybuilder.py      # Bronze layer
+python standardize_data.py  # Silver layer
 ```
 
 ---
@@ -131,6 +141,7 @@ The project uses a secure configuration system that keeps your database credenti
 
 ## 🏗️ **Architecture**
 
+### **Medallion Architecture Pipeline**
 ```
 MIMIC-IV Database (Source)
 ├── mimiciv_hosp.labevents     → Lab measurements 
@@ -138,10 +149,29 @@ MIMIC-IV Database (Source)
 ├── mimiciv_hosp.d_labitems    → Lab item metadata
 └── mimiciv_icu.d_items        → Chart item metadata
                 ↓
-        QueryBuilder.py
+        🥉 Bronze Layer (querybuilder.py)
                 ↓
-    bronze.collection_disease   → Structured output
+    bronze.collection_disease   → Raw extracted data
+                ↓
+        🥈 Silver Layer (standardize_data.py)
+                ↓
+    silver.collection_disease_std → Standardized, validated data
 ```
+
+### **🥉 Bronze Layer** 
+- **Purpose**: Raw data extraction from MIMIC-IV
+- **Output**: `bronze.collection_disease`
+- **Features**: Direct extraction with basic filtering
+
+### **🥈 Silver Layer**
+- **Purpose**: Data standardization and quality assurance
+- **Output**: `silver.collection_disease_std`
+- **Features**:
+  - ✅ OMOP concept mapping for interoperability
+  - ✅ Unit standardization and conversions
+  - ✅ Clinical limit validation and outlier detection
+  - ✅ Duplicate resolution and data quality checks
+  - ✅ Comprehensive audit trails
 
 ---
 
@@ -179,32 +209,53 @@ MIMIC-IV Database (Source)
 - PostgreSQL with MIMIC-IV database
 - Database access credentials
 
-### **1. Installation**
+### **1. Installation & Setup**
 ```bash
 # Clone/navigate to project directory
 cd /path/to/querybuilder
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Alternative: Install manually
-pip install sqlalchemy psycopg2-binary pandas
+# Run complete medallion architecture setup
+./setup.sh
 ```
 
-### **2. Configuration**
-Edit database connection in `querybuilder.py` (line 248):
+This will automatically:
+- Set up virtual environment and dependencies
+- Configure database connection
+- Extract Bronze layer (raw data)
+- Process Silver layer (standardized data)
+- Validate the complete pipeline
+
+### **2. Alternative Setup Options**
+```bash
+# Bronze layer only (raw data extraction)
+./setup.sh bronze
+
+# Silver layer only (requires Bronze data)
+./setup.sh silver
+
+# Test existing pipeline
+./setup.sh test
+```
+
+### **3. Manual Configuration (if needed)**
+Edit database connection in `config_local.py`:
 ```python
-connection_string = "postgresql://username@localhost:5432/mimiciv"
+DB_CONFIG = {
+    'host': 'localhost',
+    'port': 5432,
+    'database': 'mimiciv',
+    'user': 'your_username',
+    'password': 'your_password'  # or None for OS auth
+}
 ```
 
-### **3. Run Extraction**
+### **4. Verify Results**
 ```bash
-python querybuilder.py
-```
+# Check pipeline status
+./setup.sh test
 
-### **4. Validate Results**
-```bash
-python validate_data.py
+# View analysis examples
+cat silver_analysis_queries.sql
 ```
 
 ---
@@ -213,13 +264,23 @@ python validate_data.py
 
 ```
 kod/
-├── querybuilder.py          # Main extraction script
-├── validate_data.py         # Data validation & quality checks
-├── config.py               # Configuration & parameter mappings
-├── requirements.txt        # Python dependencies
-├── README.md              # This documentation
-├── querybuilder.log       # Execution logs (generated)
-└── examples/              # SQL query examples (optional)
+├── setup.sh                    # 🚀 Main setup script (Bronze + Silver)
+├── querybuilder.py             # Bronze layer extraction script
+├── standardize_data.py         # Silver layer standardization script
+├── validate_data.py            # Bronze layer validation & quality checks
+├── validate_silver.py          # Silver layer validation & quality checks
+├── config_local.py             # Database configuration (create from template)
+├── config_template.py          # Database configuration template
+├── config_silver.py            # Silver layer configuration & mappings
+├── config.py                   # General configuration & parameter mappings
+├── requirements.txt            # Python dependencies
+├── test_db.py                  # Database connection test
+├── README.md                   # This documentation
+├── silver_analysis_queries.sql # Example SQL queries for Silver layer
+├── example_queries.sql         # Example SQL queries for Bronze layer
+├── querybuilder.log            # Bronze layer execution logs (generated)
+├── standardize.log             # Silver layer execution logs (generated)
+└── silver_validation_report_*.txt  # Silver layer validation reports (generated)
 ```
 
 ---
@@ -459,6 +520,87 @@ After running the QueryBuilder:
 
 ---
 
-**🎯 Ready to extract medical data for Acute Respiratory Failure analysis!**
+## 🏗️ **Medallion Architecture Pipeline**
 
-*For questions or issues, check the log files and troubleshooting section above.*
+This project implements a complete **Bronze → Silver → Gold** medallion architecture for medical data processing:
+
+### **🥉 Bronze Layer** (Raw Data)
+- **Script**: `querybuilder.py`
+- **Schema**: `bronze.collection_disease` 
+- **Purpose**: Extract raw clinical data from MIMIC-IV
+- **Data**: Unprocessed chartevents and labevents
+- **Runner**: `./run_bronze.sh`
+
+### **🥈 Silver Layer** (Standardized Data)
+- **Script**: `standardize_data.py`
+- **Schema**: `silver.collection_disease_std`
+- **Purpose**: Clean, standardize, and validate Bronze data
+- **Features**:
+  - ✅ Unit standardization with OMOP concepts
+  - ✅ Outlier detection and flagging
+  - ✅ Duplicate resolution
+  - ✅ Data quality validation
+- **Runner**: `./run_silver.sh`
+
+### **🥇 Gold Layer** (Analytics & BI)
+- **Script**: `gold_analytics.py`
+- **Schema**: `gold.*` (multiple analytical views)
+- **Purpose**: Create business intelligence and analytical aggregations
+- **Views Created**:
+  - 📊 `gold.patient_summaries` - Patient-level metrics
+  - 📈 `gold.clinical_indicators` - Parameter statistics & quality
+  - 📅 `gold.daily_trends` - Daily aggregated trends
+  - ⏰ `gold.hourly_patterns` - Hourly measurement patterns
+  - 🔍 `gold.data_quality_summary` - Quality dashboard
+- **Runner**: `./run_gold.sh`
+
+### **🚀 Complete Pipeline**
+Run the entire medallion architecture:
+```bash
+# Complete pipeline (Bronze → Silver)
+./setup.sh
+
+# Or run individual layers
+./setup.sh bronze    # Extract raw data
+./setup.sh silver    # Standardize data  
+```
+
+### **📊 Example Silver Layer Queries**
+```sql
+-- Top patients by measurement volume
+SELECT subject_id, concept_name, COUNT(*) as measurements
+FROM silver.collection_disease_std 
+GROUP BY subject_id, concept_name
+ORDER BY measurements DESC LIMIT 10;
+
+-- Data quality overview
+SELECT concept_name, 
+       COUNT(*) as total_measurements, 
+       COUNT(CASE WHEN is_outlier THEN 1 END) as outliers,
+       ROUND(AVG(CASE WHEN is_outlier THEN 0 ELSE 1 END) * 100, 2) as quality_percentage
+FROM silver.collection_disease_std
+GROUP BY concept_name
+ORDER BY total_measurements DESC;
+
+-- Recent standardized measurements
+SELECT charttime, concept_name, value, valueuom, is_outlier
+FROM silver.collection_disease_std 
+WHERE charttime >= CURRENT_DATE - 7
+ORDER BY charttime DESC LIMIT 20;
+```
+
+---
+
+**🎯 Ready to extract and standardize medical data for Acute Respiratory Failure analysis!**
+
+## 🚀 **Getting Started**
+
+1. **Quick Setup**: `./setup.sh` - Complete medallion architecture in one command
+2. **Explore Data**: Use `silver_analysis_queries.sql` for standardized data analysis  
+3. **Validate Pipeline**: `./setup.sh test` - Verify everything is working
+
+For questions or issues, check the log files (`querybuilder.log`, `standardize.log`) and troubleshooting section above.
+
+---
+
+*Medical Data Science - Übungsblatt 3.2 | Medallion Architecture Healthcare Data Pipeline*
