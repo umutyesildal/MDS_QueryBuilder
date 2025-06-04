@@ -8,7 +8,7 @@ For database configuration, see config_template.py and create config_local.py
 
 # Database Configuration Import
 try:
-    from config_local import DB_CONFIG
+    from config_template import DB_CONFIG
 except ImportError:
     print("⚠️ config_local.py not found. Using default configuration.")
     print("📝 Please copy config_template.py to config_local.py and update with your credentials.")
@@ -18,9 +18,13 @@ except ImportError:
         'host': 'localhost',
         'port': 5432,
         'database': 'mimiciv',
-        'user': 'your_username',    # UPDATE THIS
+        'user': 'bernazehraural',    # UPDATE THIS
         'password': None            # UPDATE THIS
     }
+
+# ICD - Codes (from Übung 1 )
+ICD_CODES = ['51881', 'J960', 'J9600', 'J9601', 'J9602', 'J961', 'J9610', 'J9611', 'J9612', 'J969']
+
 
 # OMOP Concept Mappings (from Übung 2)
 OMOP_CONCEPTS = {

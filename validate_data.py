@@ -212,7 +212,7 @@ class DataValidator:
 
 def main():
     """Main validation function."""
-    connection_string = "postgresql://umutyesildal@localhost:5432/mimiciv"
+    connection_string = "postgresql://bernazehraural@localhost:5432/mimiciv"
     
     validator = DataValidator(connection_string)
     

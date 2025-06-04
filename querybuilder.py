@@ -459,7 +459,7 @@ class QueryBuilder:
 def main():
     """Main execution function."""
     # Database connection string
-    connection_string = "postgresql://umutyesildal@localhost:5432/mimiciv"
+    connection_string = "postgresql://bernazehraural@localhost:5432/mimiciv"
     
     # Initialize and run QueryBuilder
     qb = QueryBuilder(connection_string)

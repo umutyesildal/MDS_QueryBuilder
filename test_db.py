@@ -13,7 +13,7 @@ import sys
 
 def test_connection():
     """Test database connection and schema availability."""
-    connection_string = "postgresql://umutyesildal@localhost:5432/mimiciv"
+    connection_string = "postgresql://bernazehraural@localhost:5432/mimiciv"
     
     try:
         print("🔗 Testing database connection...")
