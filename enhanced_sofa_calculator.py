@@ -43,9 +43,14 @@ class EnhancedSOFACalculator:
     def __init__(self):
         self.logger = self._setup_logging()
         self.conn = psycopg2.connect(**DB_CONFIG)
-        self.engine = create_engine(
-            f"postgresql://{DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
-        )
+        
+        # Build connection string with proper password handling
+        if DB_CONFIG.get('password'):
+            connection_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+        else:
+            connection_string = f"postgresql://{DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+        
+        self.engine = create_engine(connection_string)
         
         # SOFA scoring criteria
         self.sofa_criteria = self._define_sofa_criteria()
