@@ -47,11 +47,15 @@ class EnhancedSilverBuilder:
         # Load discovery results and OMOP mappings
         self.omop_mappings = self._load_omop_mappings()
         self.processing_stats = {
-            'total_records': 0,
+            'total_bronze_records': 0,
+            'filtered_records': 0,
+            'quality_records': 0,
+            'retention_rate': 0,
             'mapped_records': 0,
             'unmapped_records': 0,
             'outliers_flagged': 0,
             'units_converted': 0,
+            'conversions_applied': 0,
             'start_time': datetime.now(),
             'errors': []
         }
@@ -172,9 +176,14 @@ class EnhancedSilverBuilder:
         self.logger.info("✅ Silver schema and table created successfully")
 
     def load_bronze_data(self):
-        """Load all data from Bronze layer"""
-        self.logger.info("📊 Loading Bronze layer data...")
+        """Load and filter Bronze layer data based on quality flags"""
+        self.logger.info("📊 Loading Bronze layer data with quality filtering...")
         
+        # First get total count for reporting
+        total_query = "SELECT COUNT(*) FROM bronze.collection_disease"
+        total_records = pd.read_sql(total_query, self.engine).iloc[0, 0]
+        
+        # Load only good quality records (filter out outliers and suspicious records)
         query = """
         SELECT 
             id as bronze_id,
@@ -184,12 +193,23 @@ class EnhancedSilverBuilder:
             is_outlier, is_suspicious,
             extraction_timestamp as storetime
         FROM bronze.collection_disease
+        WHERE is_outlier = false AND is_suspicious = false
         ORDER BY subject_id, charttime
         """
         
         df = pd.read_sql(query, self.engine)
-        self.processing_stats['total_records'] = len(df)
-        self.logger.info(f"✅ Loaded {len(df):,} Bronze records")
+        
+        # Update processing stats
+        self.processing_stats['total_bronze_records'] = total_records
+        self.processing_stats['filtered_records'] = total_records - len(df)
+        self.processing_stats['quality_records'] = len(df)
+        self.processing_stats['retention_rate'] = len(df) / total_records * 100
+        
+        self.logger.info(f"📊 Bronze Data Quality Filtering:")
+        self.logger.info(f"   Total Bronze records: {total_records:,}")
+        self.logger.info(f"   Filtered out (outliers/suspicious): {self.processing_stats['filtered_records']:,}")
+        self.logger.info(f"   Quality records loaded: {len(df):,}")
+        self.logger.info(f"   Retention rate: {self.processing_stats['retention_rate']:.1f}%")
         
         return df
 
@@ -277,6 +297,7 @@ class EnhancedSilverBuilder:
             df.at[idx, 'transformation_log'] = '; '.join(log_entries)
         
         self.processing_stats['units_converted'] = conversions_applied
+        self.processing_stats['conversions_applied'] = conversions_applied
         self.processing_stats['outliers_flagged'] = df['quality_flags'].apply(
             lambda x: x.get('OUTLIER_DETECTED', False)
         ).sum()
@@ -383,16 +404,19 @@ class EnhancedSilverBuilder:
         report.append("")
         
         report.append("## Processing Summary")
-        report.append(f"- **Total Records Processed**: {self.processing_stats['total_records']:,}")
+        report.append(f"- **Total Bronze Records**: {self.processing_stats.get('total_bronze_records', 0):,}")
+        report.append(f"- **Quality Filtered Out**: {self.processing_stats.get('filtered_records', 0):,}")
+        report.append(f"- **Quality Records Processed**: {self.processing_stats.get('quality_records', 0):,}")
+        report.append(f"- **Retention Rate**: {self.processing_stats.get('retention_rate', 0):.1f}%")
         report.append(f"- **Successfully Mapped**: {self.processing_stats['mapped_records']:,}")
         report.append(f"- **Unmapped Records**: {self.processing_stats['unmapped_records']:,}")
-        report.append(f"- **Mapping Success Rate**: {self.processing_stats['mapped_records']/self.processing_stats['total_records']*100:.1f}%")
+        report.append(f"- **Mapping Success Rate**: {self.processing_stats['mapped_records']/self.processing_stats.get('quality_records', 1)*100:.1f}%")
         report.append("")
         
         report.append("## Quality Processing")
-        report.append(f"- **Unit Conversions Applied**: {self.processing_stats['units_converted']:,}")
-        report.append(f"- **Outliers Flagged**: {self.processing_stats['outliers_flagged']:,}")
-        report.append(f"- **Quality Flag Rate**: {self.processing_stats['outliers_flagged']/self.processing_stats['total_records']*100:.1f}%")
+        report.append(f"- **Unit Conversions Applied**: {self.processing_stats.get('units_converted', 0):,}")
+        report.append(f"- **Outliers Flagged**: {self.processing_stats.get('outliers_flagged', 0):,}")
+        report.append(f"- **Quality Flag Rate**: {self.processing_stats.get('outliers_flagged', 0)/self.processing_stats.get('quality_records', 1)*100:.1f}%")
         report.append("")
         
         # Get Silver layer statistics

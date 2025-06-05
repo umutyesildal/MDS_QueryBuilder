@@ -1,38 +1,41 @@
 # Enhanced Silver Layer Processing Report
-Generated: 2025-06-06 01:01:23
-Processing Duration: 0:00:35.500238
+Generated: 2025-06-06 01:16:01
+Processing Duration: 0:00:37.195452
 
 ## Processing Summary
-- **Total Records Processed**: 94,532
-- **Successfully Mapped**: 94,532
+- **Total Bronze Records**: 94,532
+- **Quality Filtered Out**: 3,346
+- **Quality Records Processed**: 91,186
+- **Retention Rate**: 96.5%
+- **Successfully Mapped**: 91,186
 - **Unmapped Records**: 0
 - **Mapping Success Rate**: 100.0%
 
 ## Quality Processing
 - **Unit Conversions Applied**: 0
-- **Outliers Flagged**: 3,346
-- **Quality Flag Rate**: 3.5%
+- **Outliers Flagged**: 0
+- **Quality Flag Rate**: 0.0%
 
 ## Records by SOFA System
-- **CARDIOVASCULAR**: 49,020 records, 100 patients
-- **RESPIRATORY**: 24,370 records, 100 patients
-- **CNS**: 10,992 records, 100 patients
-- **RENAL**: 8,888 records, 100 patients
-- **COAGULATION**: 847 records, 96 patients
-- **LIVER**: 415 records, 65 patients
+- **CARDIOVASCULAR**: 48,239 records, 100 patients
+- **RESPIRATORY**: 24,290 records, 100 patients
+- **RENAL**: 8,836 records, 100 patients
+- **CNS**: 8,567 records, 100 patients
+- **COAGULATION**: 843 records, 96 patients
+- **LIVER**: 411 records, 65 patients
 
 ## Top 15 OMOP Concepts
 - **Respiratory Rate**: 13,913 records
-- **Non Invasive Blood Pressure diastolic**: 8,349 records
-- **Non Invasive Blood Pressure systolic**: 8,347 records
 - **Non Invasive Blood Pressure mean**: 8,342 records
+- **Non Invasive Blood Pressure diastolic**: 8,310 records
+- **Non Invasive Blood Pressure systolic**: 8,288 records
 - **Foley**: 6,637 records
 - **Arterial Blood Pressure mean**: 5,560 records
-- **Arterial Blood Pressure systolic**: 5,525 records
-- **Arterial Blood Pressure diastolic**: 5,524 records
-- **GCS - Eye Opening**: 3,274 records
-- **GCS - Verbal Response**: 3,266 records
-- **GCS - Motor Response**: 3,251 records
+- **Arterial Blood Pressure diastolic**: 5,514 records
+- **Arterial Blood Pressure systolic**: 5,492 records
+- **GCS - Motor Response**: 2,962 records
+- **GCS - Eye Opening**: 2,643 records
+- **GCS - Verbal Response**: 1,761 records
 - **PEEP set**: 1,447 records
 - **Respiratory Rate (Total)**: 1,331 records
 - **Respiratory Rate (spontaneous)**: 1,314 records
