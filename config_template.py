@@ -11,7 +11,7 @@ DB_CONFIG = {
     'host': 'localhost',           # Your PostgreSQL host
     'port': 5432,                  # Your PostgreSQL port  
     'database': 'mimiciv',         # Your MIMIC-IV database name
-    'user': 'your_username',       # Your PostgreSQL username
+    'user': 'bernazehraural',       # Your PostgreSQL username
     'password': None,              # Your password (None for OS auth)
     # Alternative: 'password': 'your_password'
 }
