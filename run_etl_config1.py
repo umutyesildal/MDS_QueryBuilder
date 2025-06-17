@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 ETL Pipeline Execution Script for Configuration 1 (Mean-based)
 """
@@ -9,8 +10,8 @@ from datetime import datetime
 
 def run_config1_etl():
     """Execute ETL pipeline with Configuration 1"""
-    print(f"🚀 Starting ETL Pipeline with Configuration 1")
-    print(f"⏰ Started at: {datetime.now()}")
+    print("Starting ETL Pipeline with Configuration 1")
+    print("Started at: {}".format(datetime.now()))
     print("=" * 60)
     
     # Set active configuration
@@ -18,12 +19,12 @@ def run_config1_etl():
     
     # Print configuration details
     config_summary = configg.get_config_summary()
-    print("📋 Configuration Details:")
+    print("Configuration Details:")
     for key, value in config_summary.items():
-        print(f"  {key}: {value}")
+        print("  {}: {}".format(key, value))
     
-    print("\n🔄 ETL Pipeline Steps:")
-    print("  1. Data extraction from MIMIC-IV")
+    print("\nETL Pipeline Steps:")
+    print("  1. Data extraction from Silver layer")
     print("  2. Data cleaning and quality checks")
     print("  3. Mean-based aggregation")
     print("  4. Mean imputation for missing values")
@@ -31,18 +32,24 @@ def run_config1_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config1")
     
-    # TODO: Import and run your actual ETL pipeline here
-    # Example:
-    # from your_etl_module import run_etl_pipeline
-    # run_etl_pipeline(configg.ACTIVE_CONFIG)
+    # Import and run the actual ETL pipeline
+    from gold_etl_pipeline_simple import run_etl_pipeline
+    success = run_etl_pipeline(configg.ACTIVE_CONFIG)
     
-    print(f"\n✅ ETL Pipeline completed successfully")
-    print(f"📊 Results saved to: {configg.ACTIVE_CONFIG['output_table']}")
-    print(f"⏰ Completed at: {datetime.now()}")
+    if success:
+        print("\nETL Pipeline completed successfully")
+        print("Results saved to: {}".format(configg.ACTIVE_CONFIG['output_table']))
+        print("Completed at: {}".format(datetime.now()))
+        return True
+    else:
+        print("\nETL Pipeline failed")
+        return False
 
 if __name__ == "__main__":
     try:
-        run_config1_etl()
+        success = run_config1_etl()
+        if not success:
+            sys.exit(1)
     except Exception as e:
-        print(f"❌ ETL Pipeline failed: {e}")
+        print("ETL Pipeline failed: {}".format(e))
         sys.exit(1)

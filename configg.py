@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Configuration file for QueryBuilder
 ===================================
@@ -137,12 +138,12 @@ def set_active_config(config_number):
     global ACTIVE_CONFIG
     if config_number == 1:
         ACTIVE_CONFIG = CONFIG_1
-        print(f"✅ Active configuration: {CONFIG_1['name']}")
+        print("Active configuration: {}".format(CONFIG_1['name']))
     elif config_number == 2:
         ACTIVE_CONFIG = CONFIG_2
-        print(f"✅ Active configuration: {CONFIG_2['name']}")
+        print("Active configuration: {}".format(CONFIG_2['name']))
     else:
-        print("❌ Invalid configuration number. Must be 1 or 2.")
+        print("Invalid configuration number. Must be 1 or 2.")
 
 # =============================================================================
 # ANALYSIS CONFIGURATION - Task 5.4 Analysis Settings
@@ -240,9 +241,9 @@ def validate_config():
     
     for key in required_keys:
         if key not in ACTIVE_CONFIG:
-            raise ValueError(f"Missing configuration key: {key}")
+            raise ValueError("Missing configuration key: {}".format(key))
     
-    print("✅ Configuration validation successful")
+    print("Configuration validation successful")
     return True
 
 def get_both_configs():
@@ -281,5 +282,5 @@ CONFIG_JUSTIFICATION = {
 # Initialize configuration on import
 if __name__ == "__main__":
     validate_config()
-    print(f"📋 Active Configuration: {ACTIVE_CONFIG['name']}")
-    print(f"📊 Output Table: {ACTIVE_CONFIG['output_table']}")
+    print("Active Configuration: {}".format(ACTIVE_CONFIG['name']))
+    print("Output Table: {}".format(ACTIVE_CONFIG['output_table']))

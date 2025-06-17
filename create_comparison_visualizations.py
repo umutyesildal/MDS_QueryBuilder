@@ -145,80 +145,67 @@ def create_scatter_correlation_plot(df1, df2, config_tables):
     print("🔗 Creating scatter plot and correlation analysis...")
     
     # Merge data on patient_id for comparison
-    try:
-        merged_data = pd.merge(
-            df1[['patient_id', 'sofa_score', 'apache_ii_score']].dropna(), 
-            df2[['patient_id', 'sofa_score', 'apache_ii_score']].dropna(), 
-            on='patient_id', 
-            suffixes=('_config1', '_config2')
-        )
+    merged_data = pd.merge(
+        df1[['patient_id', 'sofa_score', 'apache_ii_score']].dropna(), 
+        df2[['patient_id', 'sofa_score', 'apache_ii_score']].dropna(), 
+        on='patient_id', 
+        suffixes=('_config1', '_config2')
+    )
+    
+    if len(merged_data) == 0:
+        print("⚠️ No matching patients found between configurations")
+        return None
+    
+    print(f"📊 Found {len(merged_data)} matching patients for correlation analysis")
+    
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # SOFA Score Scatter Plot
+    if 'sofa_score_config1' in merged_data.columns and 'sofa_score_config2' in merged_data.columns:
+        ax1 = axes[0]
+        ax1.scatter(merged_data['sofa_score_config1'], merged_data['sofa_score_config2'], 
+                   alpha=0.6, s=50)
         
-        if len(merged_data) == 0:
-            print("⚠️ No matching patients found between configurations")
-            return None, None
+        # Add perfect correlation line
+        max_val = max(merged_data['sofa_score_config1'].max(), merged_data['sofa_score_config2'].max())
+        min_val = min(merged_data['sofa_score_config1'].min(), merged_data['sofa_score_config2'].min())
+        ax1.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, label='Perfect Correlation')
         
-        print(f"📊 Found {len(merged_data)} matching patients for correlation analysis")
+        # Calculate correlation
+        pearson_corr, pearson_p = pearsonr(merged_data['sofa_score_config1'], merged_data['sofa_score_config2'])
+        spearman_corr, spearman_p = spearmanr(merged_data['sofa_score_config1'], merged_data['sofa_score_config2'])
         
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        ax1.set_xlabel('Config 1 SOFA Score (Mean-based)')
+        ax1.set_ylabel('Config 2 SOFA Score (Median-based)')
+        ax1.set_title(f'SOFA Score Correlation\nPearson: {pearson_corr:.3f}, Spearman: {spearman_corr:.3f}')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+    
+    # APACHE II Score Scatter Plot
+    if 'apache_ii_score_config1' in merged_data.columns and 'apache_ii_score_config2' in merged_data.columns:
+        ax2 = axes[1]
+        ax2.scatter(merged_data['apache_ii_score_config1'], merged_data['apache_ii_score_config2'], 
+                   alpha=0.6, s=50, color='orange')
         
-        # SOFA Score Scatter Plot
-        if 'sofa_score_config1' in merged_data.columns and 'sofa_score_config2' in merged_data.columns:
-            ax1 = axes[0]
-            ax1.scatter(merged_data['sofa_score_config1'], merged_data['sofa_score_config2'], 
-                       alpha=0.6, s=50)
-            
-            # Add perfect correlation line
-            max_val = max(merged_data['sofa_score_config1'].max(), merged_data['sofa_score_config2'].max())
-            min_val = min(merged_data['sofa_score_config1'].min(), merged_data['sofa_score_config2'].min())
-            ax1.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, label='Perfect Correlation')
-            
-            # Calculate correlation
-            try:
-                pearson_corr, pearson_p = pearsonr(merged_data['sofa_score_config1'], merged_data['sofa_score_config2'])
-                spearman_corr, spearman_p = spearmanr(merged_data['sofa_score_config1'], merged_data['sofa_score_config2'])
-                
-                ax1.set_xlabel('Config 1 SOFA Score (Mean-based)')
-                ax1.set_ylabel('Config 2 SOFA Score (Median-based)')
-                ax1.set_title(f'SOFA Score Correlation\nPearson: {pearson_corr:.3f}, Spearman: {spearman_corr:.3f}')
-                ax1.legend()
-                ax1.grid(True, alpha=0.3)
-            except Exception as e:
-                print(f"⚠️ Correlation calculation failed for SOFA: {e}")
-                ax1.set_title('SOFA Score Correlation (Calculation Failed)')
+        # Add perfect correlation line
+        max_val = max(merged_data['apache_ii_score_config1'].max(), merged_data['apache_ii_score_config2'].max())
+        min_val = min(merged_data['apache_ii_score_config1'].min(), merged_data['apache_ii_score_config2'].min())
+        ax2.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, label='Perfect Correlation')
         
-        # APACHE II Score Scatter Plot
-        if 'apache_ii_score_config1' in merged_data.columns and 'apache_ii_score_config2' in merged_data.columns:
-            ax2 = axes[1]
-            ax2.scatter(merged_data['apache_ii_score_config1'], merged_data['apache_ii_score_config2'], 
-                       alpha=0.6, s=50, color='orange')
-            
-            # Add perfect correlation line
-            max_val = max(merged_data['apache_ii_score_config1'].max(), merged_data['apache_ii_score_config2'].max())
-            min_val = min(merged_data['apache_ii_score_config1'].min(), merged_data['apache_ii_score_config2'].min())
-            ax2.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8, label='Perfect Correlation')
-            
-            # Calculate correlation
-            try:
-                pearson_corr, pearson_p = pearsonr(merged_data['apache_ii_score_config1'], merged_data['apache_ii_score_config2'])
-                spearman_corr, spearman_p = spearmanr(merged_data['apache_ii_score_config1'], merged_data['apache_ii_score_config2'])
-                
-                ax2.set_xlabel('Config 1 APACHE II Score (Mean-based)')
-                ax2.set_ylabel('Config 2 APACHE II Score (Median-based)')
-                ax2.set_title(f'APACHE II Score Correlation\nPearson: {pearson_corr:.3f}, Spearman: {spearman_corr:.3f}')
-                ax2.legend()
-                ax2.grid(True, alpha=0.3)
-            except Exception as e:
-                print(f"⚠️ Correlation calculation failed for APACHE II: {e}")
-                ax2.set_title('APACHE II Score Correlation (Calculation Failed)')
+        # Calculate correlation
+        pearson_corr, pearson_p = pearsonr(merged_data['apache_ii_score_config1'], merged_data['apache_ii_score_config2'])
+        spearman_corr, spearman_p = spearmanr(merged_data['apache_ii_score_config1'], merged_data['apache_ii_score_config2'])
         
-        plt.tight_layout()
-        plt.savefig('config_scatter_correlation.png', dpi=300, bbox_inches='tight')
-        print("✅ Scatter correlation plot saved as 'config_scatter_correlation.png'")
-        return fig, merged_data
-        
-    except Exception as e:
-        print(f"❌ Error creating scatter correlation plot: {e}")
-        return None, None
+        ax2.set_xlabel('Config 1 APACHE II Score (Mean-based)')
+        ax2.set_ylabel('Config 2 APACHE II Score (Median-based)')
+        ax2.set_title(f'APACHE II Score Correlation\nPearson: {pearson_corr:.3f}, Spearman: {spearman_corr:.3f}')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('config_scatter_correlation.png', dpi=300, bbox_inches='tight')
+    print("✅ Scatter correlation plot saved as 'config_scatter_correlation.png'")
+    return fig, merged_data
 
 def create_bland_altman_plot(merged_data):
     """Create Bland-Altman plot for agreement analysis"""
@@ -228,143 +215,133 @@ def create_bland_altman_plot(merged_data):
         print("⚠️ No merged data available for Bland-Altman plot")
         return None
     
-    try:
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # SOFA Score Bland-Altman
+    if 'sofa_score_config1' in merged_data.columns and 'sofa_score_config2' in merged_data.columns:
+        ax1 = axes[0]
         
-        # SOFA Score Bland-Altman
-        if 'sofa_score_config1' in merged_data.columns and 'sofa_score_config2' in merged_data.columns:
-            ax1 = axes[0]
-            
-            mean_scores = (merged_data['sofa_score_config1'] + merged_data['sofa_score_config2']) / 2
-            diff_scores = merged_data['sofa_score_config1'] - merged_data['sofa_score_config2']
-            
-            ax1.scatter(mean_scores, diff_scores, alpha=0.6, s=50)
-            
-            # Add mean difference line
-            mean_diff = diff_scores.mean()
-            std_diff = diff_scores.std()
-            
-            ax1.axhline(y=mean_diff, color='red', linestyle='-', label=f'Mean Diff: {mean_diff:.3f}')
-            ax1.axhline(y=mean_diff + 1.96*std_diff, color='red', linestyle='--', 
-                       label=f'+1.96 SD: {mean_diff + 1.96*std_diff:.3f}')
-            ax1.axhline(y=mean_diff - 1.96*std_diff, color='red', linestyle='--', 
-                       label=f'-1.96 SD: {mean_diff - 1.96*std_diff:.3f}')
-            
-            ax1.set_xlabel('Mean of Both Configurations')
-            ax1.set_ylabel('Difference (Config1 - Config2)')
-            ax1.set_title('SOFA Score Bland-Altman Plot')
-            ax1.legend()
-            ax1.grid(True, alpha=0.3)
+        mean_scores = (merged_data['sofa_score_config1'] + merged_data['sofa_score_config2']) / 2
+        diff_scores = merged_data['sofa_score_config1'] - merged_data['sofa_score_config2']
         
-        # APACHE II Score Bland-Altman
-        if 'apache_ii_score_config1' in merged_data.columns and 'apache_ii_score_config2' in merged_data.columns:
-            ax2 = axes[1]
-            
-            mean_scores = (merged_data['apache_ii_score_config1'] + merged_data['apache_ii_score_config2']) / 2
-            diff_scores = merged_data['apache_ii_score_config1'] - merged_data['apache_ii_score_config2']
-            
-            ax2.scatter(mean_scores, diff_scores, alpha=0.6, s=50, color='orange')
-            
-            # Add mean difference line
-            mean_diff = diff_scores.mean()
-            std_diff = diff_scores.std()
-            
-            ax2.axhline(y=mean_diff, color='red', linestyle='-', label=f'Mean Diff: {mean_diff:.3f}')
-            ax2.axhline(y=mean_diff + 1.96*std_diff, color='red', linestyle='--', 
-                       label=f'+1.96 SD: {mean_diff + 1.96*std_diff:.3f}')
-            ax2.axhline(y=mean_diff - 1.96*std_diff, color='red', linestyle='--', 
-                       label=f'-1.96 SD: {mean_diff - 1.96*std_diff:.3f}')
-            
-            ax2.set_xlabel('Mean of Both Configurations')
-            ax2.set_ylabel('Difference (Config1 - Config2)')
-            ax2.set_title('APACHE II Score Bland-Altman Plot')
-            ax2.legend()
-            ax2.grid(True, alpha=0.3)
+        ax1.scatter(mean_scores, diff_scores, alpha=0.6, s=50)
         
-        plt.tight_layout()
-        plt.savefig('config_bland_altman.png', dpi=300, bbox_inches='tight')
-        print("✅ Bland-Altman plot saved as 'config_bland_altman.png'")
-        return fig
+        # Add mean difference line
+        mean_diff = diff_scores.mean()
+        std_diff = diff_scores.std()
         
-    except Exception as e:
-        print(f"❌ Error creating Bland-Altman plot: {e}")
-        return None
+        ax1.axhline(y=mean_diff, color='red', linestyle='-', label=f'Mean Diff: {mean_diff:.3f}')
+        ax1.axhline(y=mean_diff + 1.96*std_diff, color='red', linestyle='--', 
+                   label=f'+1.96 SD: {mean_diff + 1.96*std_diff:.3f}')
+        ax1.axhline(y=mean_diff - 1.96*std_diff, color='red', linestyle='--', 
+                   label=f'-1.96 SD: {mean_diff - 1.96*std_diff:.3f}')
+        
+        ax1.set_xlabel('Mean of Both Configurations')
+        ax1.set_ylabel('Difference (Config1 - Config2)')
+        ax1.set_title('SOFA Score Bland-Altman Plot')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+    
+    # APACHE II Score Bland-Altman
+    if 'apache_ii_score_config1' in merged_data.columns and 'apache_ii_score_config2' in merged_data.columns:
+        ax2 = axes[1]
+        
+        mean_scores = (merged_data['apache_ii_score_config1'] + merged_data['apache_ii_score_config2']) / 2
+        diff_scores = merged_data['apache_ii_score_config1'] - merged_data['apache_ii_score_config2']
+        
+        ax2.scatter(mean_scores, diff_scores, alpha=0.6, s=50, color='orange')
+        
+        # Add mean difference line
+        mean_diff = diff_scores.mean()
+        std_diff = diff_scores.std()
+        
+        ax2.axhline(y=mean_diff, color='red', linestyle='-', label=f'Mean Diff: {mean_diff:.3f}')
+        ax2.axhline(y=mean_diff + 1.96*std_diff, color='red', linestyle='--', 
+                   label=f'+1.96 SD: {mean_diff + 1.96*std_diff:.3f}')
+        ax2.axhline(y=mean_diff - 1.96*std_diff, color='red', linestyle='--', 
+                   label=f'-1.96 SD: {mean_diff - 1.96*std_diff:.3f}')
+        
+        ax2.set_xlabel('Mean of Both Configurations')
+        ax2.set_ylabel('Difference (Config1 - Config2)')
+        ax2.set_title('APACHE II Score Bland-Altman Plot')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('config_bland_altman.png', dpi=300, bbox_inches='tight')
+    print("✅ Bland-Altman plot saved as 'config_bland_altman.png'")
+    return fig
 
 def generate_statistical_summary(df1, df2, merged_data):
     """Generate statistical summary report"""
     print("📋 Generating statistical summary report...")
     
-    try:
-        summary_report = []
-        summary_report.append("=" * 70)
-        summary_report.append("CONFIGURATION COMPARISON STATISTICAL SUMMARY")
-        summary_report.append("=" * 70)
-        summary_report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        summary_report.append("")
-        
-        # Data overview
-        summary_report.append("📊 DATA OVERVIEW:")
-        summary_report.append(f"  Config 1 (Mean-based): {len(df1)} records")
-        summary_report.append(f"  Config 2 (Median-based): {len(df2)} records")
-        summary_report.append(f"  Matching patients: {len(merged_data) if merged_data is not None else 0}")
-        summary_report.append("")
-        
-        # Score statistics
-        score_columns = ['sofa_score', 'apache_ii_score', 'saps_ii_score', 'oasis_score']
-        
-        for score_col in score_columns:
-            if score_col in df1.columns and score_col in df2.columns:
-                data1 = df1[score_col].dropna()
-                data2 = df2[score_col].dropna()
-                
-                if len(data1) > 0 and len(data2) > 0:
-                    summary_report.append(f"📈 {score_col.replace('_', ' ').upper()} STATISTICS:")
-                    summary_report.append(f"  Config 1 - Mean: {data1.mean():.3f}, Median: {data1.median():.3f}, Std: {data1.std():.3f}")
-                    summary_report.append(f"  Config 2 - Mean: {data2.mean():.3f}, Median: {data2.median():.3f}, Std: {data2.std():.3f}")
-                    
-                    # Statistical tests
-                    try:
-                        t_stat, t_p = stats.ttest_ind(data1, data2)
-                        u_stat, u_p = stats.mannwhitneyu(data1, data2, alternative='two-sided')
-                        
-                        summary_report.append(f"  T-test: statistic={t_stat:.3f}, p-value={t_p:.6f}")
-                        summary_report.append(f"  Mann-Whitney U: statistic={u_stat:.3f}, p-value={u_p:.6f}")
-                    except Exception as e:
-                        summary_report.append(f"  Statistical tests failed: {e}")
-                    
-                    summary_report.append("")
-        
-        # Correlation analysis
-        if merged_data is not None and len(merged_data) > 0:
-            summary_report.append("🔗 CORRELATION ANALYSIS:")
+    summary_report = []
+    summary_report.append("=" * 70)
+    summary_report.append("CONFIGURATION COMPARISON STATISTICAL SUMMARY")
+    summary_report.append("=" * 70)
+    summary_report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    summary_report.append("")
+    
+    # Data overview
+    summary_report.append("📊 DATA OVERVIEW:")
+    summary_report.append(f"  Config 1 (Mean-based): {len(df1)} records")
+    summary_report.append(f"  Config 2 (Median-based): {len(df2)} records")
+    summary_report.append(f"  Matching patients: {len(merged_data) if merged_data is not None else 0}")
+    summary_report.append("")
+    
+    # Score statistics
+    score_columns = ['sofa_score', 'apache_ii_score', 'saps_ii_score', 'oasis_score']
+    
+    for score_col in score_columns:
+        if score_col in df1.columns and score_col in df2.columns:
+            data1 = df1[score_col].dropna()
+            data2 = df2[score_col].dropna()
             
-            for score_col in ['sofa_score', 'apache_ii_score']:
-                col1 = f"{score_col}_config1"
-                col2 = f"{score_col}_config2"
+            if len(data1) > 0 and len(data2) > 0:
+                summary_report.append(f"📈 {score_col.replace('_', ' ').upper()} STATISTICS:")
+                summary_report.append(f"  Config 1 - Mean: {data1.mean():.3f}, Median: {data1.median():.3f}, Std: {data1.std():.3f}")
+                summary_report.append(f"  Config 2 - Mean: {data2.mean():.3f}, Median: {data2.median():.3f}, Std: {data2.std():.3f}")
                 
-                if col1 in merged_data.columns and col2 in merged_data.columns:
-                    try:
-                        pearson_corr, pearson_p = pearsonr(merged_data[col1], merged_data[col2])
-                        spearman_corr, spearman_p = spearmanr(merged_data[col1], merged_data[col2])
-                        
-                        summary_report.append(f"  {score_col.replace('_', ' ').title()}:")
-                        summary_report.append(f"    Pearson: r={pearson_corr:.3f}, p={pearson_p:.6f}")
-                        summary_report.append(f"    Spearman: ρ={spearman_corr:.3f}, p={spearman_p:.6f}")
-                    except Exception as e:
-                        summary_report.append(f"    Correlation failed: {e}")
+                # Statistical tests
+                try:
+                    t_stat, t_p = stats.ttest_ind(data1, data2)
+                    u_stat, u_p = stats.mannwhitneyu(data1, data2, alternative='two-sided')
+                    
+                    summary_report.append(f"  T-test: statistic={t_stat:.3f}, p-value={t_p:.6f}")
+                    summary_report.append(f"  Mann-Whitney U: statistic={u_stat:.3f}, p-value={u_p:.6f}")
+                except Exception as e:
+                    summary_report.append(f"  Statistical tests failed: {e}")
+                
+                summary_report.append("")
+    
+    # Correlation analysis
+    if merged_data is not None and len(merged_data) > 0:
+        summary_report.append("🔗 CORRELATION ANALYSIS:")
+        
+        for score_col in ['sofa_score', 'apache_ii_score']:
+            col1 = f"{score_col}_config1"
+            col2 = f"{score_col}_config2"
             
-            summary_report.append("")
+            if col1 in merged_data.columns and col2 in merged_data.columns:
+                try:
+                    pearson_corr, pearson_p = pearsonr(merged_data[col1], merged_data[col2])
+                    spearman_corr, spearman_p = spearmanr(merged_data[col1], merged_data[col2])
+                    
+                    summary_report.append(f"  {score_col.replace('_', ' ').title()}:")
+                    summary_report.append(f"    Pearson: r={pearson_corr:.3f}, p={pearson_p:.6f}")
+                    summary_report.append(f"    Spearman: ρ={spearman_corr:.3f}, p={spearman_p:.6f}")
+                except Exception as e:
+                    summary_report.append(f"    Correlation failed: {e}")
         
-        # Save report
-        with open('configuration_comparison_report.txt', 'w') as f:
-            f.write('\n'.join(summary_report))
-        
-        print("✅ Statistical summary saved as 'configuration_comparison_report.txt'")
-        return summary_report
-        
-    except Exception as e:
-        print(f"❌ Error generating statistical summary: {e}")
-        return []
+        summary_report.append("")
+    
+    # Save report
+    with open('configuration_comparison_report.txt', 'w') as f:
+        f.write('\n'.join(summary_report))
+    
+    print("✅ Statistical summary saved as 'configuration_comparison_report.txt'")
+    return summary_report
 
 def main():
     """Main visualization function"""
@@ -378,9 +355,6 @@ def main():
         print("❌ Failed to load configuration data")
         return
     
-    # Initialize variables
-    merged_data = None
-    
     # Create visualizations
     try:
         # Distribution comparison
@@ -389,12 +363,8 @@ def main():
         # Box plot comparison
         create_boxplot_comparison(df1, df2, config_tables)
         
-        # Scatter correlation plot (with safe unpacking)
-        result = create_scatter_correlation_plot(df1, df2, config_tables)
-        if result is not None:
-            scatter_fig, merged_data = result
-        else:
-            print("⚠️ Scatter correlation plot creation failed")
+        # Scatter correlation plot
+        scatter_fig, merged_data = create_scatter_correlation_plot(df1, df2, config_tables)
         
         # Bland-Altman plot
         create_bland_altman_plot(merged_data)
