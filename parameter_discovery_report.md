@@ -1,5 +1,5 @@
 # MIMIC-IV SOFA Parameter Discovery Report
-Generated: 2025-06-05 16:40:03
+Generated: 2025-06-06 01:21:39
 
 ## Database Overview
 - mimiciv_icu.chartevents: 668,862 records

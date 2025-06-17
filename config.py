@@ -9,6 +9,7 @@ For database configuration, see config_template.py and create config_local.py
 # Database Configuration Import
 try:
     from config_local import DB_CONFIG
+    from config_local import DB_CONFIG
 except ImportError:
     print("⚠️ config_local.py not found. Using default configuration.")
     print("📝 Please copy config_template.py to config_local.py and update with your credentials.")

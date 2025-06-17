@@ -10,9 +10,9 @@ The 'config_local.py' file is gitignored for security.
 DB_CONFIG = {
     'host': 'localhost',           # Your PostgreSQL host
     'port': 5432,                  # Your PostgreSQL port  
-    'database': 'mimiciv',         # Your MIMIC-IV database name
-    'user': 'your_username',       # Your PostgreSQL username
-    'password': None,              # Your password (None for OS auth)
+    'database': 'mimic4',         # Your MIMIC-IV database name
+    'user': 'postgres',       # Your PostgreSQL username
+    'password': 'postgres',              # Your password (None for OS auth)
     # Alternative: 'password': 'your_password'
 }
 

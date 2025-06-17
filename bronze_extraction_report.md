@@ -1,6 +1,6 @@
 # Enhanced Bronze Layer Extraction Report
-Generated: 2025-06-05 16:43:35
-Extraction Duration: 0:00:02.255206
+Generated: 2025-06-06 01:21:46
+Extraction Duration: 0:00:02.269575
 
 ## Extraction Summary
 - **Total Records Extracted**: 94,532
