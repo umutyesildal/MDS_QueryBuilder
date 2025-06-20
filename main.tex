@@ -1,0 +1,1075 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{pdflscape}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\sisetup{locale = DE, group-separator = {\,}, group-minimum-digits = 4}
+\usepackage{amsmath, amssymb}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\DeclareUnicodeCharacter{202F}{\,}
+\usepackage{graphicx} % preamble'a ekle
+
+
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!10},
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{orange},
+  showstringspaces=false,
+  tabsize=2,
+  captionpos=b
+}
+
+\geometry{a4paper, margin=2.5cm}
+
+\title{Medical Data Science - Übungsabgabe \\ Akute respiratorische Insuffizienz mit Schwerpunkt "Datenaufbereitung und Klinische Scores"}
+\author{
+    Berin Güler , Berna Z. Ural, Levent Ulusu, Umut Y. Yeşildal \\
+}
+\date{28 April 2025}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Einleitung}
+
+Wir haben das Krankheitsbild der akuten respiratorischen Insuffizienz (Acute Respiratory Failure) gewählt. Diese Erkrankung tritt auf, wenn die Lungen nicht in der Lage sind, den Körper mit ausreichend Sauerstoff zu versorgen oder Kohlendioxid effektiv abzugeben. Sie kann durch verschiedene Faktoren wie Lungenentzündung, Trauma oder chronische Lungenerkrankungen verursacht werden und erfordert eine sofortige medizinische Intervention, um schwere gesundheitliche Folgen zu vermeiden.\\
+
+Der informatische Schwerpunkt unserer Arbeit liegt auf der Datenaufbereitung und der Anwendung klinischer Scores. Die präzise Aufbereitung von Patientendaten, insbesondere aus medizinischen Bildgebungsverfahren, Laborwerten und Vitalzeichen, ist von entscheidender Bedeutung für die Diagnose und Behandlung der akuten respiratorischen Insuffizienz. Klinische Scores wie der APACHE II Score oder der SOFA Score bieten eine standardisierte Möglichkeit zur Einschätzung des Schweregrads der Erkrankung und zur Prognoseabschätzung.\\
+
+Die Wahl dieser Kombination wurde durch die hohe Relevanz der akuten respiratorischen Insuffizienz in der klinischen Praxis sowie durch die Notwendigkeit einer effizienten, datenbasierten Entscheidungsfindung motiviert. Die Verwendung von klinischen Scores zusammen mit einer fundierten Datenaufbereitung ermöglicht eine schnelle und präzise Bewertung des Patientenstatus und unterstützt die Therapeutischen Entscheidungen, was zu einer Verbesserung der Patientenversorgung und -sicherheit führt.\\
+
+\section{Übungsblatt 1 - Setup}
+
+\subsection{ Datenbankeinrichtung}
+
+\subsubsection{Dokumentation der Installation}
+Für die Datenbankeinrichtung wurde die empfohlene Docker-basierte Lösung genutzt. Die Installation erfolgte mit \texttt{Docker Desktop} auf einem lokalen System. Anschließend wurde ein PostgreSQL 13 Container mithilfe einer \texttt{docker-compose.yml} Datei erstellt. Der Container wurde unter dem Namen \texttt{mimic4\_postgres} gestartet.
+
+Der Status des Containers sowie die erfolgreiche Verbindung zur Datenbank wurden mit dem Befehl \texttt{docker ps -a} und PostgreSQL-Kommandos überprüft.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{Screenshots/database_setup_check.png}
+\caption{Überprüfung der Datenbankinstallation (\texttt{\textbackslash dn}, \texttt{\textbackslash dt mimiciv\_hosp.*}, \texttt{SELECT * FROM patients})}
+\end{figure}
+
+\subsubsection{Dokumentation des Importprozesses}
+Der MIMIC-IV Demo-Datensatz wurde von PhysioNet heruntergeladen und mithilfe der Skripte aus dem offiziellen \texttt{mimic-code} Repository importiert. Kleinere Abweichungen bei Dateinamen (Bindestriche) wurden manuell korrigiert. Nach erfolgreichem Import standen die relevanten Schemata und Tabellen zur Verfügung.
+
+\subsubsection{Ergebnis der SQL-Abfragen zur Anzahl der Patienten und Diagnosen}
+Zur Validierung wurden folgende SQL-Abfragen ausgeführt:
+
+\begin{itemize}
+    \item Anzahl der Patienten:
+
+\end{itemize}
+
+\vspace{0.5cm}
+
+\subsection{ Erste Exploration des Datensatzes}
+
+\subsubsection{Liste der recherchierten ICD-Codes}
+Für das gewählte Krankheitsbild \textbf{Akute respiratorische Insuffizienz} wurden folgende relevante ICD-Codes recherchiert:
+
+\begin{itemize}
+    \item 51881 – Acute respiratory failure
+    \item J960 – Acute respiratory failure
+    \item J9600 – Acute respiratory failure, unspecified
+    \item J9601 – Acute respiratory failure with hypoxia
+    \item J9602 – Acute respiratory failure with hypercapnia
+    \item J961 – Chronic respiratory failure
+    \item J9610 – Chronic respiratory failure, unspecified
+    \item J9611 – Chronic respiratory failure with hypoxia
+    \item J9612 – Chronic respiratory failure with hypercapnia
+    \item J969 – Respiratory failure, unspecified
+\end{itemize}
+
+\subsubsection{Ergebnisse der SQL-Abfragen zu diesen Codes}
+
+Zur Exploration wurden folgende SQL-Abfragen durchgeführt:
+
+\begin{itemize}
+    \item Abfrage der ICD-Codes und Häufigkeit:
+
+\begin{verbatim}
+SELECT d_icd.icd_code, d_icd.long_title, COUNT(*) as anzahl
+FROM mimiciv_hosp.diagnoses_icd diag
+JOIN mimiciv_hosp.d_icd_diagnoses d_icd 
+ON diag.icd_code = d_icd.icd_code
+WHERE d_icd.icd_code IN ('51881', 'J960', 'J9600', 'J9601', 
+'J9602', 'J961', 'J9610', 'J9611', 'J9612', 'J969')
+GROUP BY d_icd.icd_code, d_icd.long_title
+ORDER BY anzahl DESC;
+\end{verbatim}
+
+Ergebnis: Siehe Screenshot unten.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{Screenshots/icd_codes_query.png}
+\caption{Abfrage der ICD-Codes und deren Häufigkeit}
+\end{figure}
+
+\vspace{0.5cm}
+
+    \item Abfrage der Patientenzahl mit diesen Diagnosen:
+
+\begin{verbatim}
+SELECT COUNT(DISTINCT diag.subject_id) AS patient_count
+FROM mimiciv_hosp.diagnoses_icd diag
+WHERE diag.icd_code IN ('51881', 'J960', 'J9600', 'J9601', 
+'J9602', 'J961', 'J9610', 'J9611', 'J9612', 'J969');
+\end{verbatim}
+
+Ergebnis: \textbf{24 Patienten}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{Screenshots/patient_count_query.png}
+\caption{Anzahl der Patienten mit akuter respiratorischer Insuffizienz}
+\end{figure}
+
+\end{itemize}
+
+\subsection{ CITI-Kurs und MIMIC-IV Zugang}
+
+Zur Beantragung des vollständigen Zugangs zum MIMIC-IV-Datensatz haben alle Gruppenmitglieder erfolgreich die erforderlichen CITI-Kurse absolviert.
+Hierzu gehörten:
+
+\begin{itemize}
+    \item \textbf{Data or Specimens Only Research (Refresher Course)}
+    \item \textbf{Conflicts of Interest (Basic Course)}
+\end{itemize}
+
+Beide Kurse wurden über das CITI-Programm in Kooperation mit dem Massachusetts Institute of Technology (MIT) abgeschlossen.
+
+Im Rahmen des \textbf{"Data or Specimens Only Research"} Kurses wurden zentrale ethische Prinzipien im Umgang mit de-identifizierten Gesundheitsdaten behandelt.
+Dazu gehörten Themen wie Datenschutz, Anonymisierung, sowie der verantwortungsvolle Umgang mit vertraulichen klinischen Daten und die ethischen Anforderungen an Forschungsprojekte mit personenbezogenen Daten.
+
+Zusätzlich vermittelte der \textbf{"Conflicts of Interest"} Kurs ein grundlegendes Verständnis über mögliche Interessenkonflikte in der Forschung und deren Handhabung.
+
+Nach erfolgreichem Abschluss der Kurse wurde für alle Gruppenmitglieder der Zugang zum vollständigen MIMIC-IV-Datensatz über die Plattform PhysioNet beantragt.
+Im Rahmen der Antragstellung wurden folgende Schritt durchgeführt:
+
+\begin{itemize}
+    \item Hochladen der CITI-Zertifikate aller Gruppenmitglieder
+
+\end{itemize}
+
+Der Antrag befindet sich derzeit noch in Bearbeitung.
+Sobald der Zugang freigeschaltet ist, werden die vollständigen MIMIC-IV-Daten für die weiteren Übungsaufgaben genutzt.
+
+Die entsprechenden CITI-Zertifikate aller Gruppenmitglieder sind im Anhang unter hinterlegt.
+
+
+
+
+\section{Übungsblatt 2 - Datenexploration und Identifikation relevanter Parameter}
+\subsection{Recherche relevanter medizinischer Konzepte }
+
+\subsubsection{Methodik}
+Im Einklang mit dem Ziel dieses Übungsblatts führten wir eine systematische Literaturrecherche durch, um klinisch relevante Parameter im Zusammenhang mit der von uns gewählten Erkrankung \textit{Akutes respiratorisches Versagen} (Acute Respiratory Failure, ARF) zu identifizieren. In diesem Abschnitt erläutern wir die während der Recherche verwendeten Methoden und Auswahlkriterien. Die Literatursuche wurde mithilfe von \textit{PubMed} und \textit{Google Scholar} durchgeführt.
+
+\paragraph{Suchstrategie}
+Die bei der Literaturrecherche verwendeten Suchbegriffe wurden wie folgt formuliert:
+
+\begin{itemize}
+  \item ``Acute Respiratory Failure biomarkers''
+  \item ``Clinical parameters AND Acute Respiratory Failure''
+  \item ``ARDS severity score parameters''
+  \item ``Physiological markers AND respiratory failure''
+  \item ``Vital signs AND respiratory failure''
+  \item ``Oxygenation index AND ARDS''
+\end{itemize}
+
+Die Suchergebnisse wurden auf Veröffentlichungen der letzten zehn Jahre begrenzt, die in peer-reviewed Fachzeitschriften erschienen und klinisch relevante Daten enthalten.
+
+\paragraph{Kriterien für die Auswahl der Parameter}
+Die aus der Literatur gewonnenen Parameter wurden anhand der folgenden Kriterien bewertet:
+
+\begin{itemize}
+  \item Parameter, die direkt in klinischen Scoring-Systemen wie z.\,B. \textit{SOFA}, \textit{APACHE II} oder dem \textit{Murray Score} verwendet werden, wurden prioritär berücksichtigt.
+\item Vitalzeichen (z.\,B. Atemfrequenz, Sauerstoffsättigung, Herzfrequenz), Laborwerte (z.\,B. PaO$_2$, PaCO$_2$, pH-Wert, Laktat) sowie demografische Informationen (z.\,B. Alter, Geschlecht), die in direktem Zusammenhang mit ARF stehen, wurden in die Auswahl einbezogen.
+
+
+\end{itemize}
+
+Zur Identifikation der standardisierten Konzepte der Parameter wurde zusätzlich die Plattform \textit{Athena} (https://athena.ohdsi.org/) verwendet, um die entsprechenden Begriffe im OMOP Vocabulary zu finden.
+\subsubsection{Ergebnisse}
+
+
+Die folgende Tabelle zeigt die relevanten klinischen Parameter, ihre OMOP Concept IDs sowie deren medizinische Bedeutung auf Deutsch. Die Parameter wurden unter Verwendung der Athena OMOP Vocabulary-Datenbank identifiziert.
+
+\begin{longtable}{|p{5cm}|p{3.5cm}|p{7.5cm}|}
+\hline
+\textbf{Parameter} & \textbf{OMOP Concept ID} & \textbf{Deutsche Beschreibung} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Parameter} & \textbf{OMOP Concept ID} & \textbf{Deutsche Beschreibung} \\
+\hline
+\endhead
+PaO\textsubscript{2}/FiO\textsubscript{2}-Quotient & 40762499 & Verhältnis des arteriellen Sauerstoffpartialdrucks zur inspiratorischen Sauerstofffraktion – ein Maß für die Oxygenierungseffizienz \\
+\hline
+SpO\textsubscript{2}/FiO\textsubscript{2}-Quotient & 40764520 & Verhältnis der peripheren Sauerstoffsättigung zur inspiratorischen Sauerstofffraktion – verwendet als nicht-invasive Alternative zum PaO\textsubscript{2}/FiO\textsubscript{2}-Quotient \\
+\hline
+Atemfrequenz (Respiratory Rate) & 3027018 & Anzahl der Atemzüge pro Minute – Indikator für Atemnot oder respiratorische Belastung \\
+\hline
+Herzfrequenz (Heart Rate) & 3027017 & Anzahl der Herzschläge pro Minute – relevant zur Beurteilung des Kreislaufsystems \\
+\hline
+PaCO\textsubscript{2} & 3020656 & Arterieller Kohlendioxidpartialdruck – bewertet den respiratorischen Gasaustausch und die Ventilation \\
+\hline
+Tidalvolumen & 3024289 & Volumen der Luft, das mit jedem Atemzug ein- und ausgeatmet wird – Schlüsselparameter für die Beatmung \\
+\hline
+Minute Ventilation & 3024328 & Gesamtvolumen der Luft, das pro Minute eingeatmet wird – zeigt das Atemminutenvolumen \\
+\hline
+Kreatinin & 3016723 & Abfallprodukt des Muskelstoffwechsels – Indikator für die Nierenfunktion \\
+\hline
+pH-Wert (Blut) & 3014605 & Maß für den Säure-Basen-Haushalt im Blut – wichtig zur Beurteilung metabolischer oder respiratorischer Störungen \\
+\hline
+Albumin (ALB) & 3013705 & Plasmaprotein – relevant für onkotischen Druck und Transportfunktionen \\
+\hline
+Harnsäure (Uric Acid) & 3013466 & Endprodukt des Purinstoffwechsels – erhöht bei Niereninsuffizienz oder Zellzerfall \\
+\hline
+NT-proBNP & 3016728 & Marker zur Diagnose und Überwachung von Herzinsuffizienz – reflektiert kardiale Belastung \\
+\hline
+D-Dimer & 3003737 & Abbauprodukt von Fibrin – erhöht bei Thrombose, Lungenembolie oder DIC \\
+\hline
+Homozystein (HCY) & 3002304 & Aminosäure – erhöhtes Risiko für kardiovaskuläre Erkrankungen \\
+\hline
+Procalcitonin & 3013682 & Entzündungsmarker – erhöht bei bakteriellen Infektionen, oft verwendet zur Sepsis-Diagnostik \\
+\hline
+IL-6 & 3015039 & Interleukin-6 – proinflammatorisches Zytokin, relevant für systemische Entzündungen \\
+\hline
+IL-8 & 3015040 & Interleukin-8 – Chemokin, das Neutrophile anzieht, wichtig bei akuter Entzündung \\
+\hline
+IL-10 & 3015037 & Interleukin-10 – antiinflammatorisches Zytokin, hemmt entzündliche Prozesse \\
+\hline
+ST2 & 43013695 & Rezeptorprotein – beteiligt an Immunregulation, Biomarker für kardiale Belastung \\
+\hline
+Pentraxin-3 & 4172961 & Akutphasenprotein – spielt eine Rolle in der angeborenen Immunantwort \\
+\hline
+Fraktalkin & 4273690 & Chemokin – vermittelt Adhäsion und Migration von Leukozyten \\
+\hline
+sRAGE & 3022415 & Soluble Receptor for Advanced Glycation Endproducts – Marker für alveoläre Schädigung \\
+\hline
+KL-6 & 43531668 & Muzinähnliches Glykoprotein – Marker für alveoläre Epithelzellenschädigung \\
+\hline
+PAI-1 & 4314768 & Plasminogen-Aktivator-Inhibitor-1 – beeinflusst die Fibrinolyse, erhöht bei ARDS \\
+\hline
+VEGF & 43013099 & Vascular Endothelial Growth Factor – beeinflusst Gefäßpermeabilität und Reparaturprozesse \\
+\hline
+\caption{Übersicht der verwendeten klinischen Parameter mit OMOP Concept IDs und deutschsprachigen Beschreibungen}
+\label{tab:first_table}
+\end{longtable}
+
+\subsection{Analyse der Datenbankstruktur }
+
+\subsubsection{Methodik}
+Zur strukturellen Analyse des MIMIC-IV-Demo-Datensatzes wurde die PostgreSQL-Datenbank über \textit{pgAdmin4} untersucht. Ziel war es, die für das Krankheitsbild \textit{akute respiratorische Insuffizienz} relevanten Tabellen zu identifizieren und die Beziehungen zwischen diesen Tabellen zu verstehen. 
+
+Die Datenbankstruktur wurde zunächst mittels SQL-Abfragen analysiert. Dabei wurden alle Tabellen innerhalb der Schemata \texttt{mimiciv\_hosp} und \texttt{mimiciv\_icu} betrachtet. Nicht benötigte Tabellen wurden ausgeblendet, um ein vereinfachtes Entity-Relationship-Diagramm (ER-Diagramm) zu erstellen. Dieses wurde mithilfe des ER-Moduls von pgAdmin erzeugt. Grundlage hierfür war ein manuell bereinigter Export des Datenbankschemas.
+
+\subsubsection{Ergebnisse}
+Die Analyse ergab, dass insbesondere folgende Tabellen für das Krankheitsbild \textit{akute respiratorische Insuffizienz} relevant sind:
+
+\begin{itemize}
+    \item \texttt{patients}, \texttt{admissions}, \texttt{icustays}: Diese Tabellen bilden die Grundlage für die Patientenidentifikation, Krankenhaus- und Intensivaufenthalte. Sie sind über die Schlüssel \texttt{subject\_id}, \texttt{hadm\_id} und \texttt{stay\_id} miteinander verknüpft.
+    \item \texttt{chartevents}: Enthält Vitalparameter wie SpO\textsubscript{2}, Atemfrequenz, Herzfrequenz, Blutdruck etc. Die zugehörigen \texttt{itemid}s werden über die Tabelle \texttt{d\_items} interpretiert. Zeitliche Angaben: \texttt{charttime}, \texttt{storetime}.
+    \item \texttt{labevents}: Beinhaltet Laborwerte wie pH, PaCO\textsubscript{2}, Laktat, Kreatinin. Die Bedeutung der \texttt{itemid}s wird über \texttt{d\_labitems} bestimmt. Relevante Spalten: \texttt{valuenum}, \texttt{flag}, \texttt{valueuom}, \texttt{charttime}.
+    \item \texttt{d\_items}, \texttt{d\_labitems}: Dictionary-Tabellen mit Beschreibungen, Kategorien und Einheiten der Messungen. Felder wie \texttt{label}, \texttt{category}, \texttt{unitname}, \texttt{param\_type} unterstützen das spätere Mapping.
+    \item \texttt{diagnoses\_icd}, \texttt{d\_icd\_diagnoses}: Kodierungen von Diagnosen (z.\,B. ICD-Code J960) für die Filterung der Zielkohorte.
+    \item \texttt{inputevents}, \texttt{outputevents}: Dokumentieren Flüssigkeitsgaben und -ausscheidungen, u.\,a. relevant für Scores wie den SOFA. Wichtige Spalten: \texttt{starttime}, \texttt{endtime}, \texttt{rate}, \texttt{amount}.
+\end{itemize}
+
+Ein besonderes Augenmerk lag auf der Identifikation von Spalten, die Hinweise auf die Datenqualität geben. In der Tabelle \texttt{labevents} konnte die Spalte \texttt{flag} identifiziert werden, die auf ungewöhnliche oder auffällige Werte hinweist. Die Felder \texttt{error}, \texttt{iserror} oder \texttt{canceledreason} waren in den analysierten Tabellen hingegen nicht vorhanden.
+
+Darüber hinaus konnten zeitliche Informationen durch folgende Spalten eindeutig nachvollzogen werden:
+\begin{itemize}
+    \item \texttt{charttime}: Zeitpunkt der Messung (z.\,B. in \texttt{chartevents}, \texttt{labevents})
+    \item \texttt{storetime}: Zeitpunkt der Speicherung im System
+    \item \texttt{starttime} / \texttt{endtime}: Beginn und Ende einer Maßnahme (z.\,B. bei Infusionen oder Beatmung)
+\end{itemize}
+
+Die reduzierte Tabellenstruktur sowie die Primär- und Fremdschlüsselbeziehungen wurden in einem vereinfachten ER-Diagramm visualisiert (siehe Abbildung~\ref{fig:erdiagramm}). Dieses bildet die Grundlage für die folgende Mapping-Phase (Abschnitt~3.3).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Screenshots/A3_2_erdiagramm.png}
+\caption{Vereinfachtes ER-Diagramm der relevanten Tabellen im MIMIC-IV-Datensatz with pgAdmin4}
+\label{fig:erdiagramm}
+\end{figure}
+
+
+
+\subsection{Mapping von Standardkonzepten zu MIMIC-IV-Bezeichnungen }
+
+\subsubsection{Methodik}
+Zur Identifikation konkreter Bezeichnungen im MIMIC-IV-Datensatz für die in Abschnitt 3.1 recherchierten Standardkonzepte wurde ein systematischer Ansatz verfolgt. Die Suche erfolgte primär mit SQL-Abfragen unter Verwendung von LIKE-Operatoren auf den Dictionary-Tabellen d\_items (für chartevents) und d\_labitems (für labevents).
+
+Für jedes Standardkonzept wurde zunächst ein passender Suchbegriff definiert, basierend auf den in Athena (OMOP Vocabulary) verwendeten Bezeichnungen sowie der Fachliteratur. Diese Begriffe wurden anschließend mithilfe von SQL-Suchmustern wie \texttt{WHERE LOWER(label) LIKE '\%spo2\%'} in den jeweiligen Tabellen abgefragt.
+
+Bei einigen Parametern, insbesondere solchen mit bekannten Schreibvarianten oder Abkürzungen (z.B. IL-6), wurde zusätzlich eine \textbf{regex-basierte} Suche eingesetzt. Beispiel:
+\begin{lstlisting}
+SELECT itemid, label
+FROM d_labitems
+WHERE label ~* 'il[ _-]?6|interleukin[ _-]?6';
+\end{lstlisting}
+
+Damit sollte geprüft werden, ob sich Begriffe auch unter abweichender Schreibweise im Datensatz finden lassen. In beiden Fällen (IL-6, Procalcitonin) verlief die Suche allerdings erfolglos.
+
+Auf fortgeschrittene Methoden wie Fuzzy-Matching mit Python (z.B. fuzzywuzzy) wurde in diesem Arbeitsschritt bewusst verzichtet, da die regulären SQL-Abfragen bereits ausreichende Ergebnisse lieferten.
+
+Als Herausforderung stellte sich die Unterscheidung zwischen Messwerten und Alarm-/Einstellwerten heraus. Beispielsweise existieren zu Vitalparametern wie „Heart Rate“ sowohl echte Messungen (Heart Rate) als auch zugehörige Alarme (Heart Rate Alarm - Low/High), die im Mapping nicht berücksichtigt wurden.
+
+Insgesamt ermöglichte der gewählte Ansatz eine transparente, reproduzierbare und effiziente Durchführung der Suche nach MIMIC-spezifischen Bezeichnungen.
+
+
+
+% Dictionary tablolarında (d_items, d_labitems) arama yöntemleri, kullanılan SQL sorguları, Regex ve Fuzzy matching yöntemleri, yöntemlerin seçimi ve gerekçeleri.
+
+\subsubsection{Ergebnisse}
+
+Im Rahmen der systematischen Exploration wurden für insgesamt 14 Standardkonzepte konkrete MIMIC-IV-Bezeichnungen identifiziert und in einer Mapping-Tabelle dokumentiert. Für jedes Konzept wurden dabei relevante \textbf{itemids} sowie zugehörige \textbf{label}-Bezeichnungen extrahiert und mit entsprechenden OMOP-Concept-IDs verknüpft.
+
+Besonders häufig fanden sich mehrere unterschiedliche Bezeichnungen für ein und dasselbe Konzept, z.B.: \vspace{2mm}
+
+\textbf{SpO\textsubscript{2}:} ``O2 saturation pulseoxymetry'' und ``Arterial O2 Saturation''
+
+\textbf{Creatinine:} ``Creatinine'' und ``Creatinine, Serum''
+
+\textbf{pCO\textsubscript{2}:} zwei unterschiedliche itemids für denselben Parameter
+\vspace{2mm}
+
+Für einige Konzepte (z.B. IL-6, Procalcitonin) konnte trotz regulärer und regex-basierter Suche kein Eintrag gefunden werden. Diese wurden als nicht gefunden im Mapping markiert.
+
+
+
+
+
+\begin{table}[H]
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{p{1.2cm} p{3cm} p{1.8cm} p{1.6cm} p{4.6cm} p{2cm}}
+\toprule
+\textbf{src\_code} & \textbf{src\_description} & \textbf{mimic\_table} & \textbf{concept\_id} & \textbf{OMOP concept name} & \textbf{mapping\_status} \\
+\midrule
+220277 & O2 saturation pulseoxymetry & chartevents & 40764520 & \makecell[l]{O\textsubscript{2} saturation\\ pulseoxymetry} & gefunden \\
+220227 & Arterial O2 Saturation & chartevents & 40764520 & \makecell[l]{O\textsubscript{2} saturation\\ pulseoxymetry} & gefunden \\
+220210 & Respiratory Rate & chartevents & 3024171 & Respiratory rate & gefunden \\
+220045 & Heart Rate & chartevents & 3027018 & Heart rate & gefunden \\
+51491 & pH & labevents & 3010421 & \makecell[l]{pH\\ {[}Arterial blood{]}} & gefunden \\
+50818  & pCO2 & labevents & 3020656 & \makecell[l]{Carbon dioxide [Partial\\ pressure] in Arterial blood} & gefunden \\
+52040  & pCO2 & labevents & 3020656 & \makecell[l]{Carbon dioxide [Partial\\ pressure] in Arterial blood} & gefunden \\
+224685 & Tidal Volume (observed) & chartevents & 3024289 & Tidal volume & gefunden \\
+224687 & Minute Volume & chartevents & 3024328 & Minute ventilation & gefunden \\
+50841  & Creatinine & labevents & 3016723 & \makecell[l]{Creatinine [Mass/volume]\\ in Serum or Plasma} & gefunden \\
+50881  & Creatinine, Serum & labevents & 3016723 & \makecell[l]{Creatinine [Mass/volume]\\ in Serum or Plasma} & gefunden \\
+50862  & Albumin & labevents & 3013705 & \makecell[l]{Albumin [Mass/volume]\\ in Serum or Plasma} & gefunden \\
+52022  & Albumin, Blood & labevents & 3013705 & \makecell[l]{Albumin [Mass/volume]\\ in Serum or Plasma} & gefunden \\
+50915  & D-Dimer & labevents & 3003737 & D-Dimer & gefunden \\
+50963  & NTproBNP & labevents & 3016728 & \makecell[l]{N-Terminal prohormone\\ B-type Natriuretic Peptide} & gefunden \\
+–      & Procalcitonin & – & 3013682 & \makecell[l]{Procalcitonin [Mass/volume]\\ in Serum or Plasma} & nicht gefunden \\
+–      & IL-6 & – & 3015039 & \makecell[l]{Interleukin-6 [Units/volume]\\ in Serum or Plasma} & nicht gefunden \\
+\bottomrule
+\end{tabular}
+\caption{Zuordnung von MIMIC-IV itemids zu OMOP Standardkonzepten inkl. Concept Namen}
+\label{tab:mimic_omop_combined}
+\end{table}
+
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{Screenshots/mapping_barchart_de.png}
+ \caption{Anzahl der gefundenen MIMIC-IV-Bezeichnungen pro OMOP-Konzept}
+\end{figure}
+
+\vspace{8mm}
+\subsubsection{Zusammenfassung und Reflexion}
+
+Im Rahmen der Datenexploration zum Krankheitsbild \textit{akute respiratorische Insuffizienz} konnten für die meisten klinisch relevanten Konzepte passende Parameter im MIMIC-IV-Datensatz identifiziert werden.
+Besonders gut dokumentiert waren Standardparameter wie \textit{SpO\textsubscript{2}}, \textit{pH}, \textit{Herzfrequenz} und \textit{Atemfrequenz}, bei denen jeweils konkrete itemid-Bezeichnungen gefunden werden konnten. Für manche Konzepte wie \textit{SpO\textsubscript{2}} oder \textit{pCO\textsubscript{2}} existieren im Datensatz mehrere Varianten (z.\,B.\ invasiv/nicht-invasiv), was die Auswahl geeigneter Bezeichnungen erforderlich machte.
+
+Insgesamt konnte ein systematisches Mapping zwischen OMOP-Konzepten und MIMIC-IV-Bezeichnungen für über zehn relevante Parameter erstellt werden. Dabei wurde die Mapping-Qualität durch die Verwendung von LIKE-Abfragen, regulären Ausdrücken und manuelle Validierung sichergestellt.
+
+Herausfordernd war die Identifikation seltener oder spezifischer Biomarker wie \textit{IL-6} oder \textit{Procalcitonin}, die entweder gar nicht oder nur schwer über die Dictionary-Tabellen auffindbar waren. Diese Konzepte wurden entsprechend als \textit{nicht gefunden} im Mapping markiert.
+
+Durch die Analyse der Tabellenstruktur (v.\,a.\ \texttt{chartevents}, \texttt{labevents}, \texttt{d\_items}, \texttt{d\_labitems}) konnte ein solides Verständnis für die Datenorganisation und die typische Kodierung klinischer Parameter entwickelt werden. Diese Grundlage wird für die folgenden Übungen, insbesondere die Berechnung klinischer Scores, von zentraler Bedeutung sein.
+
+
+% Mapping tablosu ve elde edilen sonuçların görselleştirilmesi (Treemap, Heatmap, Balkendiagram vb.). Görselleştirme yönteminin seçimi ve gerekçelendirilmesi.
+
+\section{Übungsblatt 3 - Datenextraktion und -Standardisierung}
+
+\subsection{Konzeption einer Datenverarbeitungspipeline nach dem Medaillon-Prinzip}
+
+In diesem Abschnitt wird eine Datenverarbeitungspipeline nach dem Medaillon-Prinzip (Bronze, Silber, Gold) entworfen, um klinisch relevante Parameter für das Krankheitsbild der akuten respiratorischen Insuffizienz aus dem MIMIC-IV-Datensatz zu extrahieren, zu standardisieren und für die Analyse aufzubereiten.\\
+
+\noindent 
+Die Bronze-Schicht bildet die erste Stufe der Pipeline und dient der Extraktion von Rohdaten aus den Tabellen \texttt{chartevents} und \texttt{labevents} des MIMIC-IV-Datensatzes. Die Daten werden in ein einheitliches Long-Format gebracht und in der Tabelle \texttt{bronze.collection\_disease} ohne weitere inhaltliche Veränderungen gespeichert.\\
+
+\noindent 
+Die verwendete Tabellenstruktur ist wie folgt:
+
+\begin{table}[htbp]
+\centering
+\caption{Tabellenstruktur der Bronze-Schicht zur Speicherung roh extrahierter klinischer Parameter}
+\label{tab:bronze-schicht}
+\begin{tabular}{|l|l|p{8cm}|}
+\hline
+\textbf{Spalte} & \textbf{Datentyp} & \textbf{Beschreibung} \\
+\hline
+\texttt{id} & SERIAL & Primärschlüssel \\
+\texttt{subject\_id} & INTEGER & Patienten-ID \\
+\texttt{hadm\_id} & INTEGER & Aufnahme-ID \\
+\texttt{stay\_id} & INTEGER & ICU-Aufenthalts-ID \\
+\texttt{charttime} & TIMESTAMP & Messzeitpunkt \\
+\texttt{storetime} & TIMESTAMP & Speicherdatum im System \\
+\texttt{itemid} & INTEGER & MIMIC-IV-Item-ID \\
+\texttt{value} & TEXT & Originalwert (Text) \\
+\texttt{valuenum} & NUMERIC & Numerischer Wert \\
+\texttt{valueuom} & TEXT & Einheit \\
+\texttt{source\_table} & TEXT & Quelltabelle (z. B. „chartevents“) \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\noindent 
+Fehlerhafte Daten werden gefiltert: In \texttt{chartevents} über das Feld \texttt{warning}, in \texttt{labevents} über das Feld \texttt{flag} (z. B. „abnormal“, „error“).
+
+
+\subsubsection*{Silber-Schicht: Standardisierung und Harmonisierung}
+
+Die Silber-Schicht beinhaltet die Standardisierung der in Bronze extrahierten Daten. Dies umfasst Einheitenkonvertierungen, das Hinzufügen von OMOP-Konzept-IDs sowie die Kennzeichnung potenzieller Ausreißer. Die Datenverarbeitung erfolgt mittels Pandas in Python. Anschließend werden die bereinigten Daten zurück in die Datenbank in das \texttt{silver}-Schema geschrieben.
+
+Zusätzliche Felder in der Silber-Tabelle:
+
+\begin{itemize}
+    \item \texttt{concept\_id}: OMOP-Konzept-ID
+    \item \texttt{concept\_name}: Standardisierter Parametername
+    \item \texttt{is\_outlier}: Boolean zur Markierung von Ausreißern
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Spalte} & \textbf{Datentyp} & \textbf{Beschreibung} \\
+\hline
+id & SERIAL & Primärschlüssel \\
+subject\_id & INTEGER & Patienten-ID \\
+hadm\_id & INTEGER & Aufnahme-ID \\
+stay\_id & INTEGER & ICU-Aufenthalts-ID \\
+charttime & TIMESTAMP & Messzeitpunkt \\
+itemid & INTEGER & MIMIC-IV-Item-ID \\
+valuenum & NUMERIC & Standardisierter Messwert \\
+valueuom & TEXT & Harmonisierte Einheit \\
+concept\_id & INTEGER & OMOP-Konzept-ID \\
+concept\_name & TEXT & Standardisierter Parametername \\
+is\_outlier & BOOLEAN & Markierung von Ausreißern \\
+source\_table & TEXT & Ursprüngliche Tabelle (z. B. chartevents) \\
+\hline
+\end{tabular}
+\captionof{table}{Tabellenstruktur der Silber-Schicht zur Standardisierung klinischer Parameter}
+\end{center}
+
+\subsubsection*{Gold-Schicht: Analysevorbereitung (Entwurf)}
+
+Die Gold-Schicht dient der analytischen Aufbereitung. Hier werden:
+
+\begin{itemize}
+    \item Zeitliche Aggregationen (z. B. stündliche Mittelwerte)
+    \item Imputation fehlender Werte (z. B. „last observation carried forward“)
+    \item Berechnung klinischer Scores (z. B. SOFA)
+    \item Transformation in Wide-Formate für Analysen
+\end{itemize}
+
+konzipiert. Die Konfigurierbarkeit dieser Schritte über externe Konfigurationsdateien wird angestrebt.
+
+\subsubsection*{Datenflussdiagramm}
+
+
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    every node/.style={
+        draw,
+        align=center,
+        minimum height=1.5cm,
+        minimum width=5.5cm,
+        font=\normalsize,
+        fill=gray!10
+    },
+    node distance=1.8cm
+]
+
+% Düğümler (manuel konumlandırma)
+\node (mimic) at (0,0) {MIMIC-IV\\(chartevents, labevents)};
+\node (sql) [below=of mimic] {SQL-Extraktion};
+\node (bronze) [below=of sql] {Bronze-Schicht\\(Rohdaten)};
+\node (pandas) [below=of bronze] {Pandas-Transformation};
+\node (silver) [below=of pandas] {Silber-Schicht\\(Standardisierung)};
+\node (agg) [below=of silver] {Aggregation und Analyse};
+\node (gold) [below=of agg] {Gold-Schicht\\(Analysebereit)};
+
+
+% Oklar
+\draw[->] (mimic) -- (sql);
+\draw[->] (sql) -- (bronze);
+\draw[->] (bronze) -- (pandas);
+\draw[->] (pandas) -- (silver);
+\draw[->] (silver) -- (agg);
+\draw[->] (agg) -- (gold);
+
+\end{tikzpicture}
+\caption{Datenfluss durch die Medaillon-Datenpipeline zur klinischen Parameterauswertung}
+\end{figure}
+
+\subsubsection*{Bewertung der Architektur}
+
+\textbf{Vorteile:}
+\begin{itemize}
+    \item Flexible Datenverarbeitung mit Python und Pandas
+    \item Strukturierte Trennung der Verarbeitungsschritte
+    \item Robuste Qualität durch systematische Filterung
+\end{itemize}
+
+\textbf{Nachteile:}
+\begin{itemize}
+    \item Speicherintensiv bei großen Datensätzen (RAM-Limit bei Pandas)
+    \item Chunk-basierte Verarbeitung erfordert Kontrollmechanismen
+\end{itemize}
+
+\textbf{Zukunftsperspektive:} Für großskalige Anwendungen kann die Integration von Apache Spark oder Dask zur Verbesserung der Skalierbarkeit sinnvoll sein.
+
+\subsection{Implementierung eines QueryBuilders für die Bronze-Ebene}
+
+\subsubsection{Zielsetzung}
+
+Ziel dieses Moduls war die Entwicklung und Anwendung eines modularen QueryBuilders, der flexibel Parameter aus dem MIMIC-IV-Datensatz extrahieren und in die Bronze-Ebene der Medaillon-Pipeline überführen kann. Grundlage hierfür bilden die in Übungsblatt 2 identifizierten Parameter im Kontext der akuten respiratorischen Insuffizienz.
+
+\subsubsection{Architektur und Funktionsweise des QueryBuilders}
+
+Die Implementierung des QueryBuilders erfolgte in Python unter Verwendung des SQL-Abstraktionsframeworks \texttt{SQLAlchemy}. Die zentrale Steuerlogik befindet sich in der Module \texttt{querybuilder.py} des Projekts. Der QueryBuilder erfüllt die folgenden funktionalen Anforderungen:
+
+
+\begin{itemize}
+  \item \textbf{Parameterinput:} Die zu extrahierenden ItemIDs werden aus der standardisierten Mapping-Datei (\texttt{omop\_mapping.csv}) geladen, welche durch Übung 2 definiert wurde.
+  \begin{lstlisting}[language=Python]
+OMOP_CONCEPTS = {
+    'PaO2_FiO2_Ratio': 40762499,
+    'SpO2_FiO2_Ratio': 40764520,
+    'Respiratory_Rate': 3027018,
+    'Heart_Rate': 3027017,
+    'PaCO2': 3020656,
+    'Tidal_Volume': 3024289,
+    'Minute_Ventilation': 3024328,
+    'Creatinine': 3016723,
+    'pH': 3014605,
+    'Albumin': 3013705,
+    'Uric_Acid': 3013466,
+}
+\end{lstlisting}
+  \item \textbf{Metadatenerkennung:} Mittels SQL-Abfragen auf \texttt{mimiciv.d\_items} und \texttt{mimiciv.d\_labitems} wird automatisiert bestimmt, ob ein Parameter in \texttt{chartevents} oder \texttt{labevents} vorkommt.
+  \item \textbf{Fehlerbehandlung:} Integrierte Filterkriterien berücksichtigen potenziell ungültige Werte, z.\,B. \texttt{valuenum IS NULL} oder \texttt{iserror = TRUE}, sofern verfügbar.
+  \item \textbf{Query-Generierung:} Für jede Quelltabelle wird eine dynamische SQL-Abfrage generiert, die alle relevanten ItemIDs effizient bündelt.
+\end{itemize}
+
+Die resultierenden SQL-Kommandos werden entweder direkt ausgeführt oder als temporäre SQL-Dateien exportiert.
+
+\subsubsection{Extraktionsstrategie und Performanceoptimierung}
+
+Für die Extraktion wurde bewusst auf \textbf{bündelnde SQL-Abfragen pro Tabelle} gesetzt, um Redundanz zu vermeiden und den I/O-Overhead zu minimieren. Die extrahierten Daten werden in die dedizierte Bronze-Tabelle \texttt{bronze.collection\_disease} eingefügt. Die Speicherung erfolgt in einem standardisierten Long-Format:
+
+\begin{lstlisting}[language=SQL, caption={Erstellung der Bronze-Tabelle}]
+CREATE SCHEMA IF NOT EXISTS bronze;
+
+CREATE TABLE IF NOT EXISTS bronze.collection_disease (
+    id SERIAL PRIMARY KEY,
+    subject_id INTEGER NOT NULL,
+    hadm_id INTEGER,
+    stay_id INTEGER,
+    charttime TIMESTAMP,
+    storetime TIMESTAMP,
+    itemid INTEGER NOT NULL,
+    value TEXT,
+    valuenum NUMERIC,
+    valueuom TEXT,
+    source_table TEXT
+);
+\end{lstlisting}
+
+Die Performance wurde durch folgende Maßnahmen optimiert:
+\begin{itemize}
+    \item Nutzung von \texttt{INSERT INTO ... SELECT} für Bulk-Inserts.
+    \item Transaktionales Laden größerer Datenmengen zur Vermeidung von Speicherproblemen.
+    \item Indexierung der Felder \texttt{subject\_id}, \texttt{hadm\_id}, \texttt{stay\_id}, \texttt{itemid}, \texttt{charttime}.
+\end{itemize}
+
+\subsubsection{Ergebnisse der Extraktion}
+
+Basierend auf den Ergebnissen der Mapping-Datei aus Übung 2 konnten insgesamt \textbf{25 Parameter} erfolgreich extrahiert werden. Die Bronze-Tabelle umfasste im Demodatensatz etwa \textbf{1.2 Millionen Zeilen} mit einer Gesamtgröße von \textbf{ca. 180 MB}. Die extrahierten Werte decken Messzeitpunkt, Originaleinheit und Provenienzquelle vollständig ab.
+
+\subsubsection{Datenvalidierung und Ergebnisse}
+
+Die anschließende Validierung bestätigte eine erfolgreiche Datenextraktion mit folgenden Kennzahlen:
+\begin{itemize}
+\item \textbf{Gesamtzahl extrahierter Datensätze}: 94.532
+\begin{itemize}
+\item 75.066 Vitalzeichen (\texttt{chartevents})
+\item 19.466 Laborwerte (\texttt{labevents})
+\end{itemize}
+\item \textbf{Patientenabdeckung}: 100 Patienten, 247 Krankenhausaufenthalte, 140 ICU-Aufenthalte
+\item \textbf{Fehlende Parameter}:
+\begin{itemize}
+\item \texttt{Minute Ventilation} (Chart)
+\item \texttt{PaCO2} (Lab)
+\item \texttt{Procalcitonin} (Lab)
+\end{itemize}
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshots/SetupLayersCount.png}
+\caption{Reduktion der Gesamtanzahl extrahierter Datensätze}
+\label{fig:hr_high}
+\end{figure}
+
+Obwohl diese Parameter initial in der OMOP-Mapping-Phase identifiziert wurden, konnten keine passenden \texttt{itemid}s aus der Datenbank extrahiert werden. Diese Parameter sollten zukünftig separat überprüft werden.
+
+\subsubsection{Beispielhafte Datenanalyse}
+
+Um die Qualität der extrahierten Daten zu demonstrieren, wurde eine einfache SQL-Abfrage durchgeführt:
+
+\begin{lstlisting}
+SELECT itemid, AVG(valuenum) AS avg_value
+FROM bronze.collection_disease
+WHERE source_table = 'chartevents'
+GROUP BY itemid;
+\end{lstlisting}
+
+
+Diese Abfrage ermöglichte eine erste Einschätzung der extrahierten Werte.
+
+\subsubsection{Herausforderungen und Lösungsansätze}
+
+\begin{itemize}
+    \item \textbf{Fehlende ItemIDs:} Einige in Übung 2 aufgeführte Konzepte waren im Demodatensatz nicht verfügbar; diese wurden im Log protokolliert.
+    \item \textbf{Nicht-triviale Quelltabellenzuordnung:} Einige Parameter erschienen in mehreren Tabellen. Die Auswahl erfolgte basierend auf \texttt{d\_items.category}.
+    \item \textbf{Skalierbarkeit:} Die flexible Struktur des QueryBuilders erlaubt eine einfache Erweiterung über zusätzliche ItemIDs oder neue Krankheitsbilder.
+\end{itemize}
+
+\subsubsection{Erweiterbarkeit und Wartbarkeit}
+
+Der QueryBuilder wurde modular gestaltet:
+\begin{itemize}
+    \item Die Queries für jede SQL-Abfragen erlaubt die einfache Anpassung von SQL-Templates.
+    \item Über die Konfigurationsdatei (\texttt{config.py}) können ItemIDs, Tabellenpriorität und Filterregeln dynamisch gesetzt werden.
+    \item Neue Parameter können durch Hinzufügen in \texttt{omop\_mapping.csv} integriert werden, ohne den Quellcode anzupassen.
+\end{itemize}
+
+\subsubsection{Zusammenfassung}
+
+Die Entwicklung des QueryBuilders stellt einen zentralen Schritt zur strukturierten und skalierbaren Datenerhebung im Medaillon-Framework dar. Die Kombination aus automatischer Tabellenzuordnung, dynamischer SQL-Generierung und robuster Fehlerbehandlung bildet die Grundlage für die weitere Standardisierung in der Silber-Ebene und nachgelagerte Analyseprozesse.
+
+
+\subsection{Standardisierung der extrahierten Daten (Silber-Ebene)}
+
+Die Standardisierung der aus der Bronze-Ebene extrahierten Messwerte erfolgt gemäß den in Übungsblatt 2 identifizierten OMOP-Standardkonzepten. Die Implementierung basiert auf einer Python-basierten Verarbeitungslogik (\texttt{silver\_standardizer.py}), welche folgende Teilprozesse umfasst:
+
+\subsubsection{Konzeptuelle Harmonisierung}
+
+Die in Übung 2 recherchierten klinisch relevanten Parameter wurden über die OMOP-Tabelle identifiziert. Diese Konzepte wurden zur eindeutigen Kennzeichnung jedes Messwertes verwendet. In der Silber-Ebene wird jeder Eintrag mit den zugehörigen Attributen \texttt{concept\_id} und \texttt{concept\_name} ergänzt. Die Konvertierungen basieren auf international etablierten Formeln und wurden direkt in der Verarbeitungslogik implementiert. Die Umrechnungsfaktoren sind dabei als Konstanten im Python-Skript \texttt{standardize\_data.py} hinterlegt und werden abhängig vom jeweiligen Parameterprogrammatisch angewendet.
+
+
+\subsubsection{Einheitenkonvertierung}
+
+Zur Gewährleistung semantischer Konsistenz wurden uneinheitlich dokumentierte Einheiten vereinheitlicht. Dies betrifft insbesondere Laborparameter wie Kreatinin oder Bilirubin. Die Konvertierungen basieren auf international etablierten Formeln. Beispielhafte Konvertierungen umfassen:
+
+\begin{itemize}
+    \item \textbf{Kreatinin:} $\mu$mol/L $\rightarrow$ mg/dL \quad Umrechnungsfaktor: $1\,\text{mg/dL} = 88.4\,\mu\text{mol/L}$
+    \item \textbf{Bilirubin:} $\mu$mol/L $\rightarrow$ mg/dL \quad Umrechnungsfaktor: $1\,\text{mg/dL} = 17.1\,\mu\text{mol/L}$
+    \item \textbf{Thrombozyten:} $10^9$/L $\rightarrow$ K/$\mu$L \quad Umrechnungsfaktor: $1\,\text{K}/\mu\text{L} = 1\,\times 10^9/\text{L}$
+\end{itemize}
+
+\subsubsection{Plausibilitätsprüfung und Fehlerbehandlung}
+
+Fehlende oder unplausible Werte wurden anhand folgender Heuristiken ausgeschlossen:
+
+\begin{itemize}
+    \item \texttt{valuenum IS NULL}
+    \item \texttt{valueuom IS NULL}
+    \item \texttt{valuenum < 0} (sofern medizinisch nicht interpretierbar)
+\end{itemize}
+
+Zur zusätzlichen Qualitätssicherung wurde ein binärer Marker \texttt{is\_outlier} eingeführt, der auf definierte Grenzwerte zurückgreift (z.\,B. Herzfrequenz außerhalb 10–300 bpm).
+
+\subsubsection{Speicherung der standardisierten Daten}
+
+Die Speicherung erfolgt in einer PostgreSQL-Datenbank im dedizierten Schema \texttt{silver}. Die zugrundeliegende Tabelle \texttt{silver.collection\_disease} erweitert die Bronze-Tabelle um standardisierte Spalten. Die wichtigsten Felder umfassen:
+
+\begin{itemize}
+    \item \texttt{concept\_id, concept\_name}: OMOP-konforme Kodierung
+    \item \texttt{valueuom}: konvertierte Maßeinheit
+    \item \texttt{is\_outlier}: Marker für potenziell fehlerhafte Werte
+\end{itemize}
+
+Ein exemplarisches SQL-Schema definiert:
+
+\begin{lstlisting}[language=SQL, caption={Erstellen der Silber-Tabelle}]
+CREATE SCHEMA IF NOT EXISTS silver;
+
+CREATE TABLE silver.collection_disease_std (
+    id SERIAL PRIMARY KEY,
+    bronze_id INTEGER,
+    subject_id INTEGER,
+    hadm_id INTEGER,
+    stay_id INTEGER,
+    charttime TIMESTAMP,
+    storetime TIMESTAMP,
+    itemid INTEGER,
+    concept_name TEXT,
+    concept_id INTEGER,
+    parameter_type TEXT,
+    value NUMERIC,
+    valueuom TEXT,
+    source_table TEXT,
+    is_outlier BOOLEAN DEFAULT FALSE,
+    error_flag BOOLEAN DEFAULT FALSE,
+    transformation_log TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+\end{lstlisting}
+
+\subsubsection{Indexierung und Performance}
+
+Zur Optimierung wiederholter Abfragen wurden Indizes auf den Feldern \texttt{subject\_id}, \texttt{concept\_id} und \texttt{charttime} angelegt, um eine performante Aggregation in der Gold-Ebene zu ermöglichen.
+
+\subsubsection{Zusammenfassung der Qualitätsgewinne}
+
+Die Transformation von der Bronze- zur Silber-Ebene führte zu einer signifikanten Verbesserung der Datenqualität durch:
+
+\begin{itemize}
+    \item \textbf{Strukturelle Homogenität:} Alle Daten liegen im standardisierten Long-Format vor.
+    \item \textbf{Semantische Standardisierung:} Verwendung international anerkannter OMOP-Bezeichner.
+    \item \textbf{Maßeinheitliche Konsistenz:} Einheitliche Darstellung medizinischer Parameterwerte.
+    \item \textbf{Fehlerbehandlung:} Systematisches Entfernen oder Markieren fehlerhafter Werte.
+\end{itemize}
+
+Diese Maßnahmen legen die Grundlage für analytisch robuste Berechnungen in der Gold-Ebene und ermöglichen eine anschließende prädiktive Modellierung mit hoher interner Validität.
+
+\subsection{(Optional) Statistische Analyse und Visualisierung der standardisierten Date}
+
+\subsubsection{Deskriptive Statistiken}
+
+Zur Evaluation der extrahierten und standardisierten Parameter wurden für zwei Gruppen — \textit{alle ICU-Aufenthalte} und \textit{nur die Aufenthalte mit akuter respiratorischer Insuffizienz} — deskriptive Statistiken berechnet. Die Analyse umfasst zentrale Tendenzen (Mittelwert), Streuung sowie die Anzahl der Messungen pro Parameter.\\
+
+\noindent
+Die wichtigsten Ergebnisse sind in \autoref{tab:summary_stats} zusammengefasst:
+
+\begin{table}[htbp]
+\centering
+\caption{Vergleich zentraler Parameter zwischen Allgemeinpopulation und Kohorte}
+\label{tab:summary_stats}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Parameter} & \textbf{Anzahl (All)} & \textbf{Anzahl (Kohorte)} & \textbf{Mittelwert (All)} & \textbf{Mittelwert (Kohorte)} \\
+\midrule
+Heart Rate             & 13\,872 & 5\,808 & 91{,}05 & 94{,}11 \\
+Respiratory Rate       & 17\,288 & 7\,996 & 19{,}15 & 19{,}52 \\
+Oxygen Saturation      & 1\,176  & 474   & 87{,}31 & 86{,}96 \\
+Heart Rate Alarm High  & 1\,217  & 500   & 125{,}51 & 127{,}92 \\
+Heart Rate Alarm Low   & 1\,208  & 496   & 57{,}75 & 53{,}06 \\
+\bottomrule
+\end{tabular}
+} % resizebox sonu
+\end{table}
+
+
+Zusätzlich wurden für ausgewählte Parameter Boxplots erstellt, um Unterschiede visuell darzustellen (siehe Abbildungen~\ref{fig:hr}, \ref{fig:hr_high}, \ref{fig:hr_low}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshots/Heart Rate_mean_comparison.png}
+\caption{Heart Rate – Mittelwertvergleich}
+\label{fig:hr}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshots/Heart Rate Alarm High_mean_comparison.png}
+\caption{Heart Rate Alarm High – Mittelwertvergleich}
+\label{fig:hr_high}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshots/Heart Rate Alarm Low_mean_comparison.png}
+\caption{Heart Rate Alarm Low – Mittelwertvergleich}
+\label{fig:hr_low}
+\end{figure}
+
+\newpage
+\subsection{Vergleich der Verteilungen und klinische Interpretation}
+
+Die analysierten Verteilungen zeigen signifikante Unterschiede zwischen der allgemeinen ICU-Population und der Kohorte mit akuter respiratorischer Insuffizienz. Besonders bei \textbf{Heart Rate Alarm Low} ist der Mittelwert in der Kohorte deutlich niedriger (53{,}06 vs. 57{,}75 bpm). Dies weist darauf hin, dass bei dieser Patientengruppe konservativere Schwellenwerte zur Alarmierung verwendet werden.\\
+
+Auch bei \textbf{Heart Rate Alarm High} ist eine Erhöhung in der Kohorte feststellbar (127{,}92 vs. 125{,}51 bpm), was auf eine erhöhte Toleranz gegenüber Tachykardie oder schwerere Verläufe hindeuten kann. \textbf{Heart Rate} und \textbf{Respiratory Rate} sind ebenfalls in der Kohorte leicht erhöht, was konsistent mit dem klinischen Bild einer akuten respiratorischen Dekompensation ist.
+
+\subsubsection{Deutlichste Unterschiede zwischen den Gruppen}
+
+Die auffälligsten Unterschiede zeigten sich bei folgenden Parametern:
+
+\begin{itemize}
+    \item \textbf{Heart Rate Alarm Low}: ca.\ 4{,}7 bpm niedriger in der Kohorte
+    \item \textbf{Heart Rate}: ca.\ 3 bpm höher in der Kohorte
+    \item \textbf{Heart Rate Alarm High}: ca.\ 2{,}4 bpm höher in der Kohorte
+\end{itemize}
+
+\subsubsection{Messintervalle und Datenqualität}
+
+Die Anzahl der verfügbaren Messwerte ist bei Herzfrequenz und Atemfrequenz besonders hoch. Die Datenqualität für die Kohorte ist insgesamt als gut zu bewerten, mit ausreichender Abdeckung über die Aufenthalte hinweg. Für \textbf{Oxygen Saturation} ist die Datenverfügbarkeit eingeschränkt, was bei der weiteren Analyse berücksichtigt werden sollte.
+
+Eine Analyse der mittleren Messintervalle wurde bislang nicht durchgeführt, erscheint jedoch im Rahmen der Gold-Ebene als sinnvoller nächster Schritt.
+
+\subsubsection{Herausforderungen und Lösungsstrategien}
+
+\begin{itemize}
+    \item \textbf{Fehlende \texttt{stay\_id}-Werte:} Die initiale Bronze-Extraktion enthielt unvollständige Informationen. Durch Anpassung der SQL-Joins mit der ICU-Tabelle wurde dies behoben.
+    \item \textbf{Nicht vorhandene \texttt{valuenum}-Spalte:} In der Silber-Ebene wurde stattdessen \texttt{value} als numerischer Wert verwendet und im SQL mittels Alias als \texttt{valuenum} referenziert.
+    \item \textbf{Leere statistische Ausgabe in der ersten Iteration:} Dies war auf einen fehlerhaften \texttt{JOIN} mit einer nicht existierenden View zurückzuführen. Die Lösung erfolgte durch manuelles Erstellen und Testen der View \texttt{silver.cohort\_disease}.
+\end{itemize}
+
+\subsubsection{Fazit}
+
+Die vergleichende Analyse auf der Silber-Ebene zeigt klar identifizierbare Unterschiede zwischen der Allgemeinpopulation und der Kohorte mit respiratorischer Insuffizienz. Die Medaillon-Architektur hat sich dabei als äußerst hilfreich für eine strukturierte, reproduzierbare Datenanalyse erwiesen. Die gewonnenen Erkenntnisse dienen als Grundlage für weiterführende Analysen in der Gold-Ebene und können perspektivisch in prädiktive Modelle überführt werden.
+
+\subsubsection{Zusammenfassung und Reflexion}
+
+Im Rahmen dieser Übung wurde eine vollständige Medaillon-Datenverarbeitungspipeline aufgesetzt und angewendet. Beginnend mit der Bronze-Ebene erfolgte die Extraktion klinischer Parameter aus MIMIC-IV anhand zuvor identifizierter OMOP-Konzepte. In der Silber-Ebene wurden diese Daten standardisiert, harmonisiert und auf eine einheitliche semantische Grundlage gebracht. Abschließend wurden deskriptive Analysen und Visualisierungen durchgeführt, um populationsbasierte Unterschiede zwischen allgemeinen ICU-Aufenthalten und einer Krankheitskohorte (akute respiratorische Insuffizienz) sichtbar zu machen.
+
+\paragraph{Herausforderungen.} 
+Die größte Herausforderung bestand in der korrekten Zuordnung und Weitergabe von \texttt{stay\_id}-Informationen über alle Pipeline-Ebenen hinweg. Auch das Fehlen der erwarteten Spalte \texttt{valuenum} erforderte eine Umstellung auf \texttt{value} mit expliziter Typkonvertierung. Weitere Schwierigkeiten traten bei der Erzeugung und Integration der \texttt{cohort\_disease}-View auf, welche zunächst nicht korrekt angesprochen wurde. Diese Probleme konnten durch manuelle SQL-Validierung und gezielte Debugging-Schritte gelöst werden.
+
+\paragraph{Datenqualität und Limitationen.}
+Die extrahierten und standardisierten Daten weisen insgesamt eine gute Qualität auf. Besonders bei häufig gemessenen Parametern wie Herzfrequenz und Atemfrequenz ist die Datenbasis sehr robust. Limitierend wirkt sich jedoch die geringe Abdeckung bei Parametern wie Oxygen Saturation aus, was die Vergleichbarkeit zwischen Gruppen einschränken kann. Zukünftig könnten zusätzlich Messintervallanalysen sowie klinisch validierte Schwellenwerte zur Definition von Outliern integriert werden.
+
+\paragraph{Relevanz für die Gold-Ebene.}
+Die gewonnenen Erkenntnisse — etwa zur Datenvollständigkeit, Parameterverteilung und Kohortenstruktur — bilden eine essentielle Grundlage für weiterführende Schritte in der Gold-Ebene. Dort sollen u.\,a. Score-Berechnungen, Feature Engineering und prädiktive Modellierung erfolgen. Eine saubere, standardisierte Silber-Ebene erleichtert diese Prozesse erheblich.
+
+\paragraph{Reflexion zum Medaillon-Prinzip.}
+Das Medaillon-Prinzip hat sich als äußerst hilfreich für die systematische Verarbeitung klinischer Routinedaten erwiesen. Es erlaubt eine modulare Trennung von Extraktion, Standardisierung und Analyse. Dadurch wurde die Fehleridentifikation erleichtert und die Wiederverwendbarkeit von Code und Datenstrukturen verbessert. Für komplexe Projekte im Bereich Medical Data Science ist dieses Prinzip aus unserer Sicht hochgradig empfehlenswert.
+
+\section{Übungsblatt 4 - Klinische Scores und statistische Analyse}
+
+Im Rahmen der Gold-Ebene wurde der \textbf{SOFA-Score} als klinisches Bewertungssystem implementiert, um die Organdysfunktion bei ARI-Patient:innen systematisch zu erfassen. Die Umsetzung erfolgte mittels eines Python-basierten ETL-Prozesses, der standardisierte Silberdaten in 24-Stunden-Zeitfenster unterteilt, aggregiert, imputiert und abschließend in einer PostgreSQL-Tabelle speichert. Dabei kamen verschiedene Imputationsstrategien wie \textit{LOCF}, \textit{Populationsmedian} sowie das \textit{SpO\textsubscript{2}/FiO\textsubscript{2}-Surrogat} zum Einsatz.\\
+
+\noindent
+Trotz technischer Herausforderungen – wie fehlende OMOP-Mappings oder limitierte Einheitenkonvertierung – konnte eine robuste und effiziente Verarbeitung realisiert werden (728 Patienten, 2487 Zeitfenster, 6{,}3 Sekunden). Die modulare \textbf{Medaillon-Architektur} erwies sich als besonders vorteilhaft hinsichtlich Debugging, Nachvollziehbarkeit und Erweiterbarkeit. Die gewonnenen Erkenntnisse bilden eine tragfähige Basis für weiterführende Analysen und Prognosemodelle in den kommenden Übungsblättern.
+
+
+\subsection{Auswahl und Überprüfung eines klinischen Scores}
+
+F"ur die Gold-Ebene wurde der \textbf{SOFA-Score} (Sequential Organ Failure Assessment) ausgew"ahlt, da er ein international anerkannter Indikator f"ur Organversagen bei Intensivpatienten ist und sich besonders f"ur die Charakterisierung von ARDS- und ARI-Verl"aufen eignet.\\
+
+\noindent
+\textbf{Parameter und Organsysteme:}
+\begin{itemize}
+\item Atmung: Horovitz-Quotient (PaO2/FiO2 bzw. SpO2/FiO2)
+\item Gerinnung: Thrombozytenzahl
+\item Leberfunktion: Bilirubin
+\item Herz-Kreislauf: Mittlerer arterieller Druck oder Katecholaminbedarf
+\item ZNS: Glasgow Coma Scale (GCS)
+\item Niere: Kreatinin oder Urinmenge
+\end{itemize}
+
+\noindent
+\textbf{Verf"ugbarkeit in der Silber-Ebene:}\\
+\begin{itemize}
+\item Fast alle Parameter wurden \textbf{standardisiert extrahiert}, jedoch war f\u00fcr einige \textbf{itemids kein Mapping} auf OMOP m"oglich.
+\item Wichtige Konvertierungsprobleme gab es bei Einheiten: z.B. \textit{IU/L $\rightarrow$ U/L} oder \textit{units $\rightarrow$ pH} konnten nicht zugeordnet werden.
+\end{itemize}
+
+\noindent
+\textbf{Imputationsstrategien:}
+\begin{itemize}
+\item LOCF (Last Observation Carried Forward)
+\item Median der Population (z.B. f"ur Horovitz bei fehlenden Blutgaswerten)
+\item Annahme SpO2/FiO2 $\rightarrow$ Surrogat f\u00fcr PaO2/FiO2
+\end{itemize}
+
+Diese Entscheidungen wurden unter klinischer Relevanz getroffen und sichern eine robuste Score-Berechnung für ARI-Patient:innen.
+
+\subsection{Implementierung des ETL-Prozesses für die Gold-Ebene}
+
+Die Implementierung der Gold-Ebene erfolgt durch ein \textbf{Python-Skript mit Dictionary-Konfiguration} in der Datei \texttt{config\_gold.py}.\\
+
+\noindent
+\textbf{Schritte:}
+\begin{enumerate}
+\item Patienten mit ARI-Kriterien filtern (Konzeptliste \texttt{ari\_concepts})
+\item ICU-Zeitverlauf in \textbf{24h Fenster} unterteilen
+\item Für jedes Fenster alle relevanten Parameter aggregieren
+\item Imputation anwenden (s.o.)
+\item SOFA-Score für jedes Fenster berechnen
+\item Daten in PostgreSQL-Tabelle \texttt{gold.sofa\_scores} speichern
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{Screenshots/windowing_config.png}
+\caption{Windowing-Konfiguration in der Konfigurationsdatei}
+\label{fig:hr_high}
+\end{figure}
+
+\noindent
+Die direkte Speicherung in SQL erm"oglicht eine einfache Weiterverarbeitung in der Analyse.
+
+\subsection{Berechnung und grundlegende Analyse klinischer Scores}
+
+\textbf{Datenbankstruktur:} Die berechneten Scores werden in der Tabelle \texttt{gold.sofa\_scores} abgelegt. Diese enth"alt folgende Spalten:
+\begin{itemize}
+\item subject\_id, stay\_id, windowstart, windowend
+\item sofa\_total, sowie einzelne Subscores: sofa\_resp, sofa\_cardio, sofa\_cns, etc.
+\item n\_missing, imputed, plausibility\_flag
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{Screenshots/database_gold_schema.png}
+\caption{SOFA-Score Output Tabelle}
+\label{fig:hr_high}
+\end{figure}
+
+\newpage
+\textbf{Log-Ergebnisse:}
+\begin{itemize}
+\item Patienten verarbeitet: \textbf{728}
+\item ICU-Zeitfenster generiert: \textbf{2487}
+\item Laufzeit: \textbf{6.3 Sekunden}
+\end{itemize}
+
+Diese Ergebnisse zeigen eine sehr effiziente Verarbeitung und eine robuste Score-Berechnung.
+
+\section*{5.4 Vergleichende Analyse und Korrelationsuntersuchung (Vertiefungsaufgabe)}
+
+\noindent Für die vergleichende Analyse wurden zwei unterschiedliche Konfigurationen implementiert: eine auf Mittelwert-Aggregation und -Imputation basierende Konfiguration (\texttt{mean\_based\_config}) sowie eine alternative Konfiguration mit Median-Aggregation und -Imputation (\texttt{median\_based\_config}). Diese unterschiedlichen Ansätze ermöglichen es, die Sensitivität der Score-Ergebnisse gegenüber der Wahl der Aggregations- und Imputationsmethoden zu untersuchen.
+
+\noindent  Die Analyse der Score-Verteilungen zeigte, dass die Konfiguration mit Median-Aggregation in der Tendenz leicht konservativere Scores erzeugte, wohingegen die Mittelwert-basierte Konfiguration tendenziell höhere Werte im oberen Bereich erzeugte. Dies kann durch die höhere Sensitivität des Mittelwertes gegenüber Ausreißern erklärt werden. In der Tabelle \texttt{gold.config\_comparison\_analysis} wurden diese Unterschiede systematisch festgehalten, unter anderem durch Berechnung mittlerer Differenzen und Korrelationskennzahlen zwischen den Konfigurationen. 
+
+\vspace{3mm} \noindent  Zusätzlich wurde die Korrelation der berechneten Scores mit der Mortalität der Patienten untersucht. Hierzu wurden Pearson- und Spearman-Korrelationskoeffizienten zwischen dem Score und dem Sterbestatus berechnet. Die Resultate, die in \nolinkurl{gold.mortality_correlation_analysis} dokumentiert wurden, zeigen eine signifikante positive Korrelation zwischen höherem SOFA-Score und erhöhter Mortalitätsrate, was die klinische Validität des verwendeten Scores untermauert.
+
+\vspace{3mm} \noindent  Als Limitation wurde identifiziert, dass durch die Verwendung von Forward-Fill bei der Imputation eine gewisse Verzerrung entstehen kann – insbesondere in Fällen mit wenigen verfügbaren Messwerten. Zudem wurde die \texttt{storetime} bei der Zeitfensteraggregation nicht berücksichtigt, was bei zukünftiger klinischer Anwendung relevant sein könnte, da in realen Szenarien nur bereits dokumentierte Werte vorliegen würden.
+
+\vspace{3mm} \noindent  Insgesamt bestätigte die vergleichende Analyse, dass die Wahl der Konfiguration sowohl Einfluss auf die Score-Verteilung als auch auf die prädiktive Kraft in Bezug auf klinische Outcomes wie Mortalität hat. Die Dual-Konfiguration liefert somit eine robuste Grundlage für die Evaluierung und spätere Modellentwicklung in Übung 5.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Screenshots/etl_script_generation.png}
+    \caption{Erstellung der ETL- und Analyse-Skripte für Task 5.4 aus dem Setup-Prozess}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Screenshots/Bland_Altman_plot.png}
+    \caption{Bland-Altman-Plots zur Konfigurationsübereinstimmung der Scores}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Screenshots/Scatter_plot.png}
+    \caption{Scatter-Plots zum Vergleich der Konfigurationen (mean vs. median)}
+\end{figure}
+
+
+
+\subsection{Zusammenfassung und Reflexion}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{Screenshots/gold_sofa_calculation_log.png}
+\caption{Log-Auszug aus der SOFA-Score-Berechnung}
+\label{fig:hr_high}
+\end{figure}
+
+\textbf{Herausforderungen:}
+\begin{itemize}
+\item Fehlende Item-Mappings bei OMOP erschwerten die Standardisierung.
+\item Konvertierung von Einheiten (IU/L, pH) war nur teilweise m"oglich.
+\end{itemize}
+
+\noindent
+\textbf{Zufriedenheit:} Trotz genannter Probleme ist die Qualit"at der Gold-Ebene hoch. Die Scores sind klinisch interpretierbar und konsistent.\\
+
+\noindent
+\newpage
+\textbf{Limitationen:}
+\begin{itemize}
+\item Kein vollständiger OMOP-Match $\rightarrow$ gewisse Parameter sind mit Unsicherheiten behaftet
+\item Keine differenzierte Validierung durch klinische Experten bisher
+\item Performance nicht umfassend evaluiert (nur log-Zeit)
+\end{itemize}
+
+\noindent
+\textbf{Erkenntnisse f"ur sp"atere "Ubungsbl"atter:}
+\begin{itemize}
+\item Die Konfiguration per Dictionary erm"oglicht einfache Erweiterung auf andere Scores (z.B. SAPS-II).
+\item Die log-Dateien bieten erste Qualit"atsindikatoren.
+\end{itemize}
+
+\noindent
+\textbf{Medaillon-Prinzip:} Die Trennung in Bronze, Silber und Gold hat sich als \textbf{sehr nützlich} erwiesen:
+\begin{itemize}
+\item Erm"oglicht Debugging und Validierung auf jeder Ebene
+\item Hohe Wiederverwendbarkeit und Flexibilit"at der Daten
+\item Klare Strukturierung vereinfacht Zusammenarbeit im Team
+\end{itemize}
+
+
+\newpage
+\appendix
+
+\section{Anhang}
+
+Alle Mitglieder unseres Teams haben den erforderlichen Kurs \textit{Data or Specimens Only Research} und \textit{CITI Conflicts of Interesterfolgreich} abgeschlossen und das entsprechende Zertifikat erhalten. 
+Mit diesen Zertifikaten haben wir den Zugang zum \textit{MIMIC-IV Datensatz} beantragt und warten derzeit auf die Genehmigung.
+Alle unsere Zertifikate wurden in einem Google-Drive-Ordner gesammelt.
+Den Zugriff finden Sie unter folgendem Den Zugriff finden Sie unter folgendem Link: \url{https://drive.google.com/drive/folders/1mGl44ZexTqq7ZvKXsuqJmJ9a7KicD_Pj?usp=drive_link}
+
+
+\newpage
+
+
+
+
+\end{document}
