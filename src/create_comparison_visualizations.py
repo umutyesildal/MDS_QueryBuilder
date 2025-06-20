@@ -12,10 +12,10 @@ from scipy import stats
 from scipy.stats import pearsonr, spearmanr
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
 from etl_configurations import *
 from config_local import DB_CONFIG
 import psycopg2

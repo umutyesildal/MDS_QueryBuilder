@@ -19,7 +19,13 @@ from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 import logging
 import sys
-import configg
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+from etl_configurations import *
 from config_local import DB_CONFIG
 
 class GoldETLPipeline:
@@ -315,7 +321,7 @@ def run_etl_pipeline(config):
 if __name__ == "__main__":
     # Test with active configuration
     try:
-        success = run_etl_pipeline(configg.ACTIVE_CONFIG)
+        success = run_etl_pipeline(ACTIVE_CONFIG)
         if success:
             print("ETL Pipeline completed successfully")
         else:

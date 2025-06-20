@@ -294,7 +294,7 @@ with open('discovered_sofa_parameters.json', 'r') as f:
     print_step "Starting SOFA parameter discovery..."
     print_info "This process analyzes MIMIC-IV to find all SOFA-relevant parameters"
     
-    if python3 parameter_discovery.py; then
+    if python3 src/utils/parameter_discovery.py; then
         print_success "SOFA parameter discovery completed"
         
         # Show discovery results
@@ -426,7 +426,7 @@ with engine.connect() as conn:
     # Use enhanced bronze builder if available, otherwise fallback
     if [[ -f "enhanced_bronze_builder.py" ]]; then
         print_progress "Running enhanced Bronze extraction..."
-        if python3 enhanced_bronze_builder.py 2>&1 | tee bronze_extraction.log; then
+        if python3 src/etl/enhanced_bronze_builder.py 2>&1 | tee logs/bronze_extraction.log; then
             print_success "Enhanced Bronze layer extraction completed"
         else
             print_error "Enhanced Bronze extraction failed"
@@ -434,7 +434,7 @@ with engine.connect() as conn:
         fi
     elif [[ -f "querybuilder.py" ]]; then
         print_progress "Running standard Bronze extraction..."
-        if python3 querybuilder.py 2>&1 | tee bronze_extraction.log; then
+        if python3 src/utils/querybuilder.py 2>&1 | tee logs/bronze_extraction.log; then
             print_success "Bronze layer extraction completed"
         else
             print_error "Bronze extraction failed"
@@ -587,7 +587,7 @@ with engine.connect() as conn:
     # Use enhanced silver builder if available
     if [[ -f "enhanced_silver_builder.py" ]]; then
         print_progress "Running enhanced Silver processing..."
-        if python3 enhanced_silver_builder.py 2>&1 | tee silver_processing.log; then
+        if python3 src/etl/enhanced_silver_builder.py 2>&1 | tee logs/silver_processing.log; then
             print_success "Enhanced Silver layer processing completed"
         else
             print_error "Enhanced Silver processing failed"
@@ -595,7 +595,7 @@ with engine.connect() as conn:
         fi
     elif [[ -f "standardize_data.py" ]]; then
         print_progress "Running standard Silver processing..."
-        if python3 standardize_data.py 2>&1 | tee silver_processing.log; then
+        if python3 src/utils/standardize_data.py 2>&1 | tee logs/silver_processing.log; then
             print_success "Silver layer processing completed"
         else
             print_error "Silver processing failed"
@@ -769,9 +769,9 @@ with engine.connect() as conn:
     print_info "Calculating clinical SOFA scores for all patients..."
     
     # Use enhanced SOFA calculator
-    if [[ -f "enhanced_sofa_calculator.py" ]]; then
+    if [[ -f "src/etl/enhanced_sofa_calculator.py" ]]; then
         print_progress "Running enhanced SOFA calculation..."
-        if python3 enhanced_sofa_calculator.py 2>&1 | tee gold_sofa_calculation.log; then
+        if python3 src/etl/enhanced_sofa_calculator.py 2>&1 | tee logs/gold_sofa_calculation.log; then
             print_success "Enhanced SOFA calculation completed"
         else
             print_error "Enhanced SOFA calculation failed"
@@ -779,7 +779,7 @@ with engine.connect() as conn:
         fi
     elif [[ -f "calculate_sofa_gold.py" ]]; then
         print_progress "Running standard SOFA calculation..."
-        if python3 calculate_sofa_gold.py 2>&1 | tee gold_sofa_calculation.log; then
+        if python3 src/scoring/calculate_sofa_gold.py 2>&1 | tee logs/gold_sofa_calculation.log; then
             print_success "SOFA calculation completed"
         else
             print_error "SOFA calculation failed"
@@ -1287,44 +1287,6 @@ show_help() {
 # Initialize logging
 echo "=== Pipeline Setup Started at $(get_timestamp) ===" > pipeline_setup.log
 
-# Handle command line arguments
-case "${1:-full}" in
-    "full"|"")
-        full_setup
-        ;;
-    "bronze")
-        bronze_only_setup
-        ;;
-    "silver")
-        silver_only_setup
-        ;;
-    "gold")
-        gold_only_setup
-        ;;
-    "discover")
-        discovery_only
-        ;;
-    "validate")
-        validation_only
-        ;;
-    "status")
-        show_pipeline_status
-        ;;
-    "clean")
-        clean_pipeline
-        ;;
-    "help"|"-h"|"--help")
-        show_help
-        ;;
-    *)
-        print_error "Unknown option: $1"
-        echo ""
-        echo "Use './complete_setup.sh help' for usage information"
-        exit 1
-        ;;
-esac
-
-
 # ...existing code...
 
 # =============================================================================
@@ -1336,35 +1298,37 @@ setup_etl_configurations() {
     
     print_step "Initializing dual ETL configurations..."
     
-    # Validate configg.py exists and is correct
-    if [[ ! -f "configg.py" ]]; then
-        print_error "configg.py not found. Please ensure the configuration file exists."
+    # Validate etl_configurations.py exists and is correct
+    if [[ ! -f "src/config/etl_configurations.py" ]]; then
+        print_error "src/config/etl_configurations.py not found. Please ensure the configuration file exists."
         exit 1
     fi
     
     print_step "Validating configurations..."
     python3 << 'EOF'
 try:
-    import configg
+    import sys
+    import os
+    sys.path.append(os.path.join('src', 'config'))
+    from etl_configurations import *
     
     print("🔧 Validating ETL configurations...")
     
     # Validate both configurations
-    original_config = configg.ACTIVE_CONFIG
+    original_config = ACTIVE_CONFIG
+     # Test CONFIG_1
+    set_active_config(1)
+    validate_config()
     
-    # Test CONFIG_1
-    configg.set_active_config(1)
-    configg.validate_config()
-    
-    # Test CONFIG_2  
-    configg.set_active_config(2)
-    configg.validate_config()
+    # Test CONFIG_2
+    set_active_config(2)
+    validate_config()
     
     # Restore original
     if original_config['name'] == 'mean_based_config':
-        configg.set_active_config(1)
+        set_active_config(1)
     else:
-        configg.set_active_config(2)
+        set_active_config(2)
     
     print("✅ All configurations validated successfully")
     
@@ -1372,7 +1336,7 @@ try:
     print("\n📋 Configuration Summary:")
     print("=" * 50)
     
-    configs = configg.get_both_configs()
+    configs = get_both_configs()
     for config_name, config in configs.items():
         print(f"\n{config_name.upper()}:")
         print(f"  Name: {config['name']}")
@@ -1384,7 +1348,7 @@ try:
         print(f"  Min Observations: {config['min_observations']}")
         print(f"  Output Table: {config['output_table']}")
     
-    print(f"\n🎯 Active Configuration: {configg.ACTIVE_CONFIG['name']}")
+    print(f"\n🎯 Active Configuration: {ACTIVE_CONFIG['name']}")
     
 except Exception as e:
     print(f"❌ Configuration initialization failed: {e}")
@@ -1410,7 +1374,10 @@ create_gold_etl_tables() {
     python3 << 'EOF'
 try:
     from config_local import DB_CONFIG
-    import configg
+    import sys
+    import os
+    sys.path.append(os.path.join('src', 'config'))
+    from etl_configurations import *
     import psycopg2
     from datetime import datetime
     
@@ -1422,7 +1389,7 @@ try:
     print("✅ Gold schema created/verified")
     
     # Get both configurations
-    configs = configg.get_both_configs()
+    configs = get_both_configs()
     
     # Create tables for both configurations
     for config_name, config in configs.items():
@@ -1625,15 +1592,17 @@ create_etl_scripts() {
     print_step "Creating ETL execution scripts..."
 
     # Create config1 execution script
-    print_step "Creating run_etl_config1.py..."
-    cat > run_etl_config1.py << 'EOF'
+    print_step "Creating src/run_etl_config1.py..."
+    cat > src/run_etl_config1.py << 'EOF'
 #!/usr/bin/env python3
 """
 ETL Pipeline Execution Script for Configuration 1 (Mean-based)
 """
 
-import configg
 import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
+import configg
 from datetime import datetime
 
 def run_config1_etl():
@@ -1678,15 +1647,17 @@ if __name__ == "__main__":
 EOF
 
     # Create config2 execution script
-    print_step "Creating run_etl_config2.py..."
-    cat > run_etl_config2.py << 'EOF'
+    print_step "Creating src/run_etl_config2.py..."
+    cat > src/run_etl_config2.py << 'EOF'
 #!/usr/bin/env python3
 """
 ETL Pipeline Execution Script for Configuration 2 (Median-based)
 """
 
-import configg
 import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
+import configg
 from datetime import datetime
 
 def run_config2_etl():
@@ -1731,15 +1702,17 @@ if __name__ == "__main__":
 EOF
 
     # Create comparison analysis script
-    print_step "Creating run_comparison_analysis.py..."
-    cat > run_comparison_analysis.py << 'EOF'
+    print_step "Creating src/run_comparison_analysis.py..."
+    cat > src/run_comparison_analysis.py << 'EOF'
 #!/usr/bin/env python3
 """
 Configuration Comparison Analysis Script for Task 5.4
 """
 
-import configg
 import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
+import configg
 from datetime import datetime
 
 def run_comparison_analysis():
@@ -1782,16 +1755,16 @@ if __name__ == "__main__":
 EOF
 
     # Make scripts executable
-    chmod +x run_etl_config1.py
-    chmod +x run_etl_config2.py
-    chmod +x run_comparison_analysis.py
+    chmod +x src/run_etl_config1.py
+    chmod +x src/run_etl_config2.py
+    chmod +x src/run_comparison_analysis.py
 
     print_success "ETL execution scripts created and made executable"
     
     print_info "📋 Created scripts:"
-    echo "   - run_etl_config1.py (mean-based configuration)"
-    echo "   - run_etl_config2.py (median-based configuration)"
-    echo "   - run_comparison_analysis.py (comparative analysis)"
+    echo "   - src/run_etl_config1.py (mean-based configuration)"
+    echo "   - src/run_etl_config2.py (median-based configuration)"
+    echo "   - src/run_comparison_analysis.py (comparative analysis)"
 }
 
 # =============================================================================
@@ -1836,9 +1809,9 @@ full_setup_with_task54() {
     create_gold_etl_tables
     create_etl_scripts
     
-    # Run configg.py to initialize and validate
-    print_step "Running configg.py initialization..."
-    python3 configg.py
+    # Run etl_configurations.py to initialize and validate
+    print_step "Running etl_configurations.py initialization..."
+    python3 src/config/etl_configurations.py
     
     if [ $? -eq 0 ]; then
         print_success "configg.py initialized successfully"
@@ -1883,9 +1856,9 @@ full_setup_with_task54() {
         echo ""
         print_info "🚀 Next Steps for Task 5.4:"
         echo "   1. Update your ETL pipeline to use configg.ACTIVE_CONFIG"
-        echo "   2. Run: python3 run_etl_config1.py"
-        echo "   3. Run: python3 run_etl_config2.py"
-        echo "   4. Run: python3 run_comparison_analysis.py"
+        echo "   2. Run: python3 src/run_etl_config1.py"
+        echo "   3. Run: python3 src/run_etl_config2.py"
+        echo "   4. Run: python3 src/run_comparison_analysis.py"
         echo "   5. Analyze results in gold schema tables"
         echo ""
         print_info "🔄 To reactivate the environment later:"
@@ -1906,57 +1879,6 @@ full_setup_with_task54() {
 # MAIN SCRIPT LOGIC MODIFICATION
 # =============================================================================
 
-# Handle command line arguments
-case "${1:-full}" in
-    "full"|"")
-        full_setup_with_task54  # Use the new function instead of full_setup
-        ;;
-    "bronze")
-        bronze_only_setup
-        ;;
-    "silver")
-        silver_only_setup
-        ;;
-    "gold")
-        gold_only_setup
-        ;;
-    "discover")
-        discovery_only
-        ;;
-    "validate")
-        validation_only
-        ;;
-    "status")
-        show_pipeline_status
-        ;;
-    "clean")
-        clean_pipeline
-        ;;
-    "task54")
-        # New option for Task 5.4 only
-        print_banner
-        print_header "${GEAR} TASK 5.4 SETUP ONLY"
-        activate_venv
-        setup_etl_configurations
-        create_gold_etl_tables
-        create_etl_scripts
-        python3 configg.py
-        print_success "Task 5.4 setup completed"
-        deactivate 2>/dev/null || true
-        ;;
-    "help"|"-h"|"--help")
-        # Update help to include task54 option
-        show_help
-        echo -e "  ${GREEN}task54${NC}      Task 5.4 setup only (dual configurations)"
-        echo ""
-        ;;
-    *)
-        print_error "Unknown option: $1"
-        echo ""
-        echo "Use './complete_setup.sh help' for usage information"
-        exit 1
-        ;;
-esac
 # ...existing code...
 
 # =============================================================================
@@ -1980,8 +1902,8 @@ create_visualization_scripts() {
     fi
 
     # Create comprehensive comparison visualization script
-    print_step "Creating create_comparison_visualizations.py..."
-    cat > create_comparison_visualizations.py << 'EOF'
+    print_step "Creating src/create_comparison_visualizations.py..."
+    cat > src/create_comparison_visualizations.py << 'EOF'
 #!/usr/bin/env python3
 """
 Configuration Comparison Visualization Script for Task 5.4
@@ -1994,6 +1916,9 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 from scipy.stats import pearsonr, spearmanr
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
 import configg
 from config_local import DB_CONFIG
 import psycopg2
@@ -2374,8 +2299,8 @@ if __name__ == "__main__":
 EOF
 
     # Create mortality analysis visualization script
-    print_step "Creating create_mortality_visualizations.py..."
-    cat > create_mortality_visualizations.py << 'EOF'
+    print_step "Creating src/create_mortality_visualizations.py..."
+    cat > src/create_mortality_visualizations.py << 'EOF'
 #!/usr/bin/env python3
 """
 Mortality Analysis Visualization Script for Task 5.4
@@ -2387,6 +2312,9 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from scipy import stats
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
 import configg
 from config_local import DB_CONFIG
 import psycopg2
@@ -2712,14 +2640,14 @@ if __name__ == "__main__":
 EOF
 
     # Make scripts executable
-    chmod +x create_comparison_visualizations.py
-    chmod +x create_mortality_visualizations.py
+    chmod +x src/create_comparison_visualizations.py
+    chmod +x src/create_mortality_visualizations.py
 
     print_success "Visualization scripts created and made executable"
     
     print_info "📋 Created visualization scripts:"
-    echo "   - create_comparison_visualizations.py (configuration comparison)"
-    echo "   - create_mortality_visualizations.py (mortality analysis)"
+    echo "   - src/create_comparison_visualizations.py (configuration comparison)"
+    echo "   - src/create_mortality_visualizations.py (mortality analysis)"
 }
 
 # =============================================================================
@@ -2766,14 +2694,14 @@ full_setup_with_task54() {
     # NEW: Create visualization scripts
     create_visualization_scripts
     
-    # Run configg.py to initialize and validate
-    print_step "Running configg.py initialization..."
-    python3 configg.py
+    # Run etl_configurations.py to initialize and validate
+    print_step "Running etl_configurations.py initialization..."
+    python3 src/config/etl_configurations.py
     
     if [ $? -eq 0 ]; then
-        print_success "configg.py initialized successfully"
+        print_success "etl_configurations.py initialized successfully"
     else
-        print_error "configg.py initialization failed"
+        print_error "etl_configurations.py initialization failed"
         exit 1
     fi
     
@@ -2804,13 +2732,13 @@ full_setup_with_task54() {
         echo "   - gold.mortality_correlation_analysis (outcome analysis)"
         echo ""
         print_info "🔧 ETL Scripts Created:"
-        echo "   - run_etl_config1.py (execute mean-based ETL)"
-        echo "   - run_etl_config2.py (execute median-based ETL)"
-        echo "   - run_comparison_analysis.py (compare configurations)"
+        echo "   - src/run_etl_config1.py (execute mean-based ETL)"
+        echo "   - src/run_etl_config2.py (execute median-based ETL)"
+        echo "   - src/run_comparison_analysis.py (compare configurations)"
         echo ""
         print_info "🎨 Visualization Scripts Created:"
-        echo "   - create_comparison_visualizations.py (configuration comparison plots)"
-        echo "   - create_mortality_visualizations.py (mortality analysis plots)"
+        echo "   - src/create_comparison_visualizations.py (configuration comparison plots)"
+        echo "   - src/create_mortality_visualizations.py (mortality analysis plots)"
         echo ""
         print_info "📋 Configuration Files:"
         echo "   - configg.py (dual configuration setup)"
@@ -2818,11 +2746,11 @@ full_setup_with_task54() {
         echo ""
         print_info "🚀 Next Steps for Task 5.4:"
         echo "   1. Update your ETL pipeline to use configg.ACTIVE_CONFIG"
-        echo "   2. Run: python3 run_etl_config1.py"
-        echo "   3. Run: python3 run_etl_config2.py"
-        echo "   4. Run: python3 run_comparison_analysis.py"
-        echo "   5. Run: python3 create_comparison_visualizations.py"
-        echo "   6. Run: python3 create_mortality_visualizations.py"
+        echo "   2. Run: python3 src/run_etl_config1.py"
+        echo "   3. Run: python3 src/run_etl_config2.py"
+        echo "   4. Run: python3 src/run_comparison_analysis.py"
+        echo "   5. Run: python3 src/create_comparison_visualizations.py"
+        echo "   6. Run: python3 src/create_mortality_visualizations.py"
         echo "   7. Analyze results in gold schema tables and generated plots"
         echo ""
         print_info "🔄 To reactivate the environment later:"
@@ -2874,7 +2802,7 @@ case "${1:-full}" in
         create_gold_etl_tables
         create_etl_scripts
         create_visualization_scripts
-        python3 configg.py
+        python3 src/config/configg.py
         print_success "Task 5.4 setup completed"
         deactivate 2>/dev/null || true
         ;;
@@ -2886,8 +2814,8 @@ case "${1:-full}" in
         create_visualization_scripts
         print_success "Visualization scripts created"
         print_info "Run the following to create visualizations:"
-        echo "  python3 create_comparison_visualizations.py"
-        echo "  python3 create_mortality_visualizations.py"
+        echo "  python3 src/create_comparison_visualizations.py"
+        echo "  python3 src/create_mortality_visualizations.py"
         deactivate 2>/dev/null || true
         ;;
     "help"|"-h"|"--help")

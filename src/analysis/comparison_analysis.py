@@ -416,10 +416,16 @@ def run_comparison(comparison_tables, comparison_config):
 
 if __name__ == "__main__":
     # Test comparison analysis
-    import configg
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+    from etl_configurations import *
     
-    comparison_tables = configg.get_comparison_tables()
-    comparison_config = configg.COMPARISON_CONFIG
+    comparison_tables = get_comparison_tables()
+    comparison_config = COMPARISON_CONFIG
     
     success = run_comparison(comparison_tables, comparison_config)
     if success:
