@@ -29,6 +29,9 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
 # Import configurations
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from config_local import DB_CONFIG
 
 class SOFAParameterDiscovery:
@@ -135,8 +138,11 @@ class SOFAParameterDiscovery:
         logger = logging.getLogger('SOFAParameterDiscovery')
         logger.setLevel(logging.INFO)
         
+        # Setup log file path
+        from file_paths import get_log_path
+        
         # Create handlers
-        file_handler = logging.FileHandler('parameter_discovery.log')
+        file_handler = logging.FileHandler(get_log_path('parameter_discovery.log'))
         console_handler = logging.StreamHandler()
         
         # Create formatter
@@ -520,11 +526,13 @@ class SOFAParameterDiscovery:
         report.append(f"- **Total SOFA parameters discovered**: {total_parameters}")
         report.append(f"- **Systems with parameters**: {len([s for s, t in discovered_params.items() if any(t.values())])}/6")
         
-        # Write report
-        with open('parameter_discovery_report.md', 'w') as f:
+        # Write report to docs/reports directory
+        from file_paths import get_report_path
+        report_path = get_report_path('parameter_discovery_report.md')
+        with open(report_path, 'w') as f:
             f.write('\n'.join(report))
         
-        self.logger.info(f"📋 Discovery report saved: parameter_discovery_report.md")
+        self.logger.info(f"📋 Discovery report saved: {report_path}")
         self.logger.info(f"🎯 Total SOFA parameters discovered: {total_parameters}")
 
     def create_omop_mappings(self, discovered_params: Dict):

@@ -12,11 +12,10 @@ from scipy import stats
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-from etl_configurations import *
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+import etl_configurations
 from config_local import DB_CONFIG
+from file_paths import get_visualization_path, get_report_path, print_file_locations
 import psycopg2
 from datetime import datetime
 import warnings
@@ -113,8 +112,9 @@ def create_mortality_by_score_plots(df):
             ax.text(0.5, 0.5, f'Missing columns for {score_col}', transform=ax.transAxes, ha='center')
     
     plt.tight_layout()
-    plt.savefig('mortality_by_scores.png', dpi=300, bbox_inches='tight')
-    print("✅ Mortality by scores plot saved as 'mortality_by_scores.png'")
+    output_path = get_visualization_path('mortality_by_scores.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Mortality by scores plot saved as '{output_path}'")
     return fig
 
 def create_score_distribution_by_mortality(df):
@@ -162,8 +162,9 @@ def create_score_distribution_by_mortality(df):
             ax.text(0.5, 0.5, f'Missing columns for {score_col}', transform=ax.transAxes, ha='center')
     
     plt.tight_layout()
-    plt.savefig('score_distribution_by_mortality.png', dpi=300, bbox_inches='tight')
-    print("✅ Score distribution by mortality saved as 'score_distribution_by_mortality.png'")
+    output_path = get_visualization_path('score_distribution_by_mortality.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Score distribution by mortality saved as '{output_path}'")
     return fig
 
 def create_age_stratified_analysis(df):
@@ -205,8 +206,9 @@ def create_age_stratified_analysis(df):
     ax2.set_ylabel('SOFA Score')
     
     plt.tight_layout()
-    plt.savefig('age_stratified_analysis.png', dpi=300, bbox_inches='tight')
-    print("✅ Age-stratified analysis saved as 'age_stratified_analysis.png'")
+    output_path = get_visualization_path('age_stratified_analysis.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Age-stratified analysis saved as '{output_path}'")
     return fig
 
 def create_correlation_heatmap(df):
@@ -244,8 +246,9 @@ def create_correlation_heatmap(df):
         axes[i].set_title(f'Correlation Matrix - {config}')
     
     plt.tight_layout()
-    plt.savefig('correlation_heatmap.png', dpi=300, bbox_inches='tight')
-    print("✅ Correlation heatmap saved as 'correlation_heatmap.png'")
+    output_path = get_visualization_path('correlation_heatmap.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Correlation heatmap saved as '{output_path}'")
     return fig
 
 def generate_mortality_report(df):
@@ -287,10 +290,11 @@ def generate_mortality_report(df):
                     report.append(f"    {score_col}: mean={score_data.mean():.2f}, std={score_data.std():.2f}")
     
     # Save report
-    with open('mortality_analysis_report.txt', 'w') as f:
+    report_path = get_report_path('mortality_analysis_report.txt')
+    with open(report_path, 'w') as f:
         f.write('\n'.join(report))
     
-    print("✅ Mortality analysis report saved as 'mortality_analysis_report.txt'")
+    print(f"✅ Mortality analysis report saved as '{report_path}'")
     return report
 
 def main():
@@ -323,12 +327,14 @@ def main():
         generate_mortality_report(df)
         
         print("\n✅ All mortality visualizations created successfully!")
-        print("📁 Generated files:")
-        print("  - mortality_by_scores.png")
-        print("  - score_distribution_by_mortality.png")
-        print("  - age_stratified_analysis.png")
-        print("  - correlation_heatmap.png")
-        print("  - mortality_analysis_report.txt")
+        print_file_locations()
+        print("� Generated visualizations:")
+        print(f"  - {get_visualization_path('mortality_by_scores.png')}")
+        print(f"  - {get_visualization_path('score_distribution_by_mortality.png')}")
+        print(f"  - {get_visualization_path('age_stratified_analysis.png')}")
+        print(f"  - {get_visualization_path('correlation_heatmap.png')}")
+        print("📋 Generated reports:")
+        print(f"  - {get_report_path('mortality_analysis_report.txt')}")
         
     except Exception as e:
         print(f"❌ Mortality visualization creation failed: {e}")

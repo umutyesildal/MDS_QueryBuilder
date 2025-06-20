@@ -24,6 +24,11 @@
 
 set -e  # Exit on any error
 
+# Project directory setup
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH}"
+
 # Color codes for output formatting
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -294,6 +299,10 @@ with open('discovered_sofa_parameters.json', 'r') as f:
     print_step "Starting SOFA parameter discovery..."
     print_info "This process analyzes MIMIC-IV to find all SOFA-relevant parameters"
     
+    # Set Python path to include project root and change to project directory
+    export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH}"
+    cd "${PROJECT_ROOT}"
+    
     if python3 src/utils/parameter_discovery.py; then
         print_success "SOFA parameter discovery completed"
         
@@ -424,7 +433,7 @@ with engine.connect() as conn:
     print_info "Extracting raw MIMIC-IV data with quality assessment..."
     
     # Use enhanced bronze builder if available, otherwise fallback
-    if [[ -f "enhanced_bronze_builder.py" ]]; then
+    if [[ -f "src/etl/enhanced_bronze_builder.py" ]]; then
         print_progress "Running enhanced Bronze extraction..."
         if python3 src/etl/enhanced_bronze_builder.py 2>&1 | tee logs/bronze_extraction.log; then
             print_success "Enhanced Bronze layer extraction completed"
@@ -432,7 +441,7 @@ with engine.connect() as conn:
             print_error "Enhanced Bronze extraction failed"
             exit 1
         fi
-    elif [[ -f "querybuilder.py" ]]; then
+    elif [[ -f "src/utils/querybuilder.py" ]]; then
         print_progress "Running standard Bronze extraction..."
         if python3 src/utils/querybuilder.py 2>&1 | tee logs/bronze_extraction.log; then
             print_success "Bronze layer extraction completed"
@@ -585,7 +594,7 @@ with engine.connect() as conn:
     print_info "Applying OMOP concepts, unit conversions, and quality controls..."
     
     # Use enhanced silver builder if available
-    if [[ -f "enhanced_silver_builder.py" ]]; then
+    if [[ -f "src/etl/enhanced_silver_builder.py" ]]; then
         print_progress "Running enhanced Silver processing..."
         if python3 src/etl/enhanced_silver_builder.py 2>&1 | tee logs/silver_processing.log; then
             print_success "Enhanced Silver layer processing completed"
@@ -593,7 +602,7 @@ with engine.connect() as conn:
             print_error "Enhanced Silver processing failed"
             exit 1
         fi
-    elif [[ -f "standardize_data.py" ]]; then
+    elif [[ -f "src/utils/standardize_data.py" ]]; then
         print_progress "Running standard Silver processing..."
         if python3 src/utils/standardize_data.py 2>&1 | tee logs/silver_processing.log; then
             print_success "Silver layer processing completed"

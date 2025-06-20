@@ -196,9 +196,13 @@ END OF SUMMARY REPORT
         report = self.generate_report()
         
         try:
-            with open(filename, 'w') as f:
+            # Save to docs/reports directory
+            from file_paths import get_report_path
+            report_path = get_report_path(filename)
+            
+            with open(report_path, 'w') as f:
                 f.write(report)
-            logger.info(f"📄 Summary report saved to: {filename}")
+            logger.info(f"📄 Summary report saved to: {report_path}")
             print(report)
             
         except Exception as e:

@@ -17,12 +17,17 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from config_local import DB_CONFIG
 
-# Setup comprehensive logging
+# Setup comprehensive logging with proper log directory
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+from file_paths import get_log_path
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('gold_analytics.log'),
+        logging.FileHandler(get_log_path('gold_analytics.log')),
         logging.StreamHandler()
     ]
 )
@@ -449,11 +454,17 @@ class GoldLayerAnalytics:
                     "=" * 70
                 ])
                 
-                # Save report
-                with open('gold_analytics_report.txt', 'w') as f:
+                # Save report to docs/reports directory
+                import sys
+                import os
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+                from file_paths import get_report_path
+                
+                report_path = get_report_path('gold_analytics_report.txt')
+                with open(report_path, 'w') as f:
                     f.write('\n'.join(report_lines))
                 
-                logger.info("✅ Analytics report saved to gold_analytics_report.txt")
+                logger.info(f"✅ Analytics report saved to {report_path}")
                 
         except Exception as e:
             logger.error(f"❌ Error generating analytics report: {e}")

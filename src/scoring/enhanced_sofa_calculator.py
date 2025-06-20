@@ -68,8 +68,14 @@ class EnhancedSOFACalculator:
         logger = logging.getLogger('EnhancedSOFACalculator')
         logger.setLevel(logging.INFO)
         
+        # Setup log file path
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+        from file_paths import get_log_path
+        
         # Create handlers
-        file_handler = logging.FileHandler('sofa_calculator.log')
+        file_handler = logging.FileHandler(get_log_path('sofa_calculator.log'))
         console_handler = logging.StreamHandler()
         
         # Create formatter
@@ -718,11 +724,17 @@ class EnhancedSOFACalculator:
         report.append(f"- **Renal**: {avg_scores[4]}")
         report.append(f"- **Neurological**: {avg_scores[5]}")
         
-        # Write report
-        with open('sofa_calculation_report.md', 'w') as f:
+        # Import file_paths utility and write report to docs/reports
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+        from file_paths import get_report_path
+        
+        report_path = get_report_path('sofa_calculation_report.md')
+        with open(report_path, 'w') as f:
             f.write('\n'.join(report))
         
-        self.logger.info("📋 SOFA calculation report saved: sofa_calculation_report.md")
+        self.logger.info(f"📋 SOFA calculation report saved: {report_path}")
 
     def build_gold_layer(self):
         """Build complete Gold layer with SOFA scoring"""
