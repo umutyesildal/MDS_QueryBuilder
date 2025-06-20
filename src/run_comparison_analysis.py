@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Configuration Comparison Analysis Script for Task 5.4
 """
 
+import configg
 import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-from etl_configurations import *
-from datetime import datetime
 from datetime import datetime
 
 def run_comparison_analysis():
@@ -20,8 +15,8 @@ def run_comparison_analysis():
     print("=" * 60)
     
     # Get both configurations
-    configs = get_both_configs()
-    comparison_tables = get_comparison_tables()
+    configs = configg.get_both_configs()
+    comparison_tables = configg.get_comparison_tables()
     
     print("🔍 Analysis Configuration:")
     print(f"  Table 1: {comparison_tables['table_1']}")
@@ -36,17 +31,24 @@ def run_comparison_analysis():
     print("  6. Generate Bland-Altman plots")
     print("  7. Save results to gold.config_comparison_analysis")
     
-    # TODO: Import and run your actual comparison analysis here
-    # Example:
-    # from your_analysis_module import run_comparison
-    # run_comparison(comparison_tables, configg.COMPARISON_CONFIG)
+    # Import and run the actual comparison analysis
+    from comparison_analysis import run_comparison
+    success = run_comparison(comparison_tables, configg.COMPARISON_CONFIG)
     
-    print(f"\n✅ Comparison Analysis completed successfully")
-    print(f"⏰ Completed at: {datetime.now()}")
+    if success:
+        print(f"\n✅ Comparison Analysis completed successfully")
+        print(f"⏰ Completed at: {datetime.now()}")
+        return True
+    else:
+        print(f"\n❌ Comparison Analysis failed")
+        return False
 
 if __name__ == "__main__":
     try:
-        run_comparison_analysis()
+        success = run_comparison_analysis()
+        if not success:
+            sys.exit(1)
     except Exception as e:
         print(f"❌ Comparison Analysis failed: {e}")
+        sys.exit(1)
         sys.exit(1)

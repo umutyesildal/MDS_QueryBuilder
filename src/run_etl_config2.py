@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 ETL Pipeline Execution Script for Configuration 2 (Median-based)
 """
 
+import configg
 import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-from etl_configurations import *
-from datetime import datetime
 from datetime import datetime
 
 def run_config2_etl():
@@ -20,16 +15,16 @@ def run_config2_etl():
     print("=" * 60)
     
     # Set active configuration
-    set_active_config(2)
+    configg.set_active_config(2)
     
     # Print configuration details
-    config_summary = get_config_summary()
+    config_summary = configg.get_config_summary()
     print("📋 Configuration Details:")
     for key, value in config_summary.items():
         print(f"  {key}: {value}")
     
     print("\n🔄 ETL Pipeline Steps:")
-    print("  1. Data extraction from MIMIC-IV")
+    print("  1. Data extraction from Silver layer")
     print("  2. Data cleaning and quality checks")
     print("  3. Median-based aggregation")
     print("  4. Median imputation for missing values")
@@ -37,18 +32,24 @@ def run_config2_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config2")
     
-    # TODO: Import and run your actual ETL pipeline here
-    # Example:
-    # from your_etl_module import run_etl_pipeline
-    # run_etl_pipeline(configg.ACTIVE_CONFIG)
+    # Import and run the actual ETL pipeline
+    from gold_etl_pipeline import run_etl_pipeline
+    success = run_etl_pipeline(configg.ACTIVE_CONFIG)
     
-    print(f"\n✅ ETL Pipeline completed successfully")
-    print(f"📊 Results saved to: {ACTIVE_CONFIG['output_table']}")
-    print(f"⏰ Completed at: {datetime.now()}")
+    if success:
+        print(f"\n✅ ETL Pipeline completed successfully")
+        print(f"📊 Results saved to: {configg.ACTIVE_CONFIG['output_table']}")
+        print(f"⏰ Completed at: {datetime.now()}")
+        return True
+    else:
+        print(f"\n❌ ETL Pipeline failed")
+        return False
 
 if __name__ == "__main__":
     try:
-        run_config2_etl()
+        success = run_config2_etl()
+        if not success:
+            sys.exit(1)
     except Exception as e:
         print(f"❌ ETL Pipeline failed: {e}")
         sys.exit(1)
