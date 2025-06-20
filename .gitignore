@@ -73,6 +73,18 @@ tmp/
 temp/
 .tmp/
 
+# Data files and processed datasets
+data/
+!data/.gitkeep
+
+# Generated reports and documentation
+docs/reports/
+!docs/reports/.gitkeep
+
+# Generated visualizations and plots
+docs/visualizations/
+!docs/visualizations/.gitkeep
+
 # Generated reports (optional - comment out if you want to track them)
 *_REPORT.txt
 validation_report_*.txt
