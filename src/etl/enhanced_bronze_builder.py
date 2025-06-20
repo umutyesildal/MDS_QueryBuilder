@@ -60,8 +60,14 @@ class EnhancedBronzeBuilder:
         logger = logging.getLogger('EnhancedBronzeBuilder')
         logger.setLevel(logging.INFO)
         
+        # Setup log file path
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+        from file_paths import get_log_path
+        
         # Create handlers
-        file_handler = logging.FileHandler('bronze_builder.log')
+        file_handler = logging.FileHandler(get_log_path('bronze_builder.log'))
         console_handler = logging.StreamHandler()
         
         # Create formatter
@@ -546,11 +552,17 @@ class EnhancedBronzeBuilder:
             coverage_pct = (patients / patient_stats[0]) * 100
             report.append(f"- **{system.upper()}**: {patients}/{patient_stats[0]} patients ({coverage_pct:.1f}%)")
         
-        # Write report
-        with open('bronze_extraction_report.md', 'w') as f:
+        # Write report to docs/reports directory
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
+        from file_paths import get_report_path
+        
+        report_path = get_report_path('bronze_extraction_report.md')
+        with open(report_path, 'w') as f:
             f.write('\n'.join(report))
         
-        self.logger.info(f"📋 Extraction report saved: bronze_extraction_report.md")
+        self.logger.info(f"📋 Extraction report saved: {report_path}")
         self.logger.info(f"🎯 Total records extracted: {total_records:,}")
 
     def build_bronze_layer(self):

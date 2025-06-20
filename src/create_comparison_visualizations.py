@@ -13,10 +13,9 @@ from scipy.stats import pearsonr, spearmanr
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
-import etl_configurations
+from src.config import etl_configurations as configg
+from src.utils.file_paths import get_visualization_path, get_report_path
 from config_local import DB_CONFIG
-from file_paths import get_visualization_path, get_report_path, print_file_locations
 import psycopg2
 from datetime import datetime
 import warnings
@@ -31,7 +30,7 @@ def load_configuration_data():
     print("📊 Loading data from both configurations...")
     
     conn = psycopg2.connect(**DB_CONFIG)
-    config_tables = etl_configurations.get_comparison_tables()
+    config_tables = configg.get_comparison_tables()
     
     try:
         # Load Config 1 data
@@ -94,9 +93,9 @@ def create_distribution_comparison(df1, df2, config_tables):
                    transform=ax.transAxes, ha='center', va='center')
     
     plt.tight_layout()
-    output_path = get_visualization_path('config_distribution_comparison.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Distribution comparison saved as '{output_path}'")
+    filepath = get_visualization_path('config_distribution_comparison.png')
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    print(f"✅ Distribution comparison saved as '{filepath}'")
     return fig
 
 def create_boxplot_comparison(df1, df2, config_tables):
@@ -139,9 +138,9 @@ def create_boxplot_comparison(df1, df2, config_tables):
         plt.xticks(rotation=45)
         
         plt.tight_layout()
-        output_path = get_visualization_path('config_boxplot_comparison.png')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✅ Box plot comparison saved as '{output_path}'")
+        filepath = get_visualization_path('config_boxplot_comparison.png')
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        print(f"✅ Box plot comparison saved as '{filepath}'")
         return fig
     else:
         print("⚠️ No data available for box plot comparison")
@@ -210,9 +209,9 @@ def create_scatter_correlation_plot(df1, df2, config_tables):
         ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    output_path = get_visualization_path('config_scatter_correlation.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Scatter correlation plot saved as '{output_path}'")
+    filepath = get_visualization_path('config_scatter_correlation.png')
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    print(f"✅ Scatter correlation plot saved as '{filepath}'")
     return fig, merged_data
 
 def create_bland_altman_plot(merged_data):
@@ -276,9 +275,9 @@ def create_bland_altman_plot(merged_data):
         ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    output_path = get_visualization_path('config_bland_altman.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Bland-Altman plot saved as '{output_path}'")
+    filepath = get_visualization_path('config_bland_altman.png')
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    print(f"✅ Bland-Altman plot saved as '{filepath}'")
     return fig
 
 def generate_statistical_summary(df1, df2, merged_data):
@@ -346,11 +345,11 @@ def generate_statistical_summary(df1, df2, merged_data):
         summary_report.append("")
     
     # Save report
-    report_path = get_report_path('configuration_comparison_report.txt')
-    with open(report_path, 'w') as f:
+    filepath = get_report_path('configuration_comparison_report.txt')
+    with open(filepath, 'w') as f:
         f.write('\n'.join(summary_report))
     
-    print(f"✅ Statistical summary saved as '{report_path}'")
+    print(f"✅ Statistical summary saved as '{filepath}'")
     return summary_report
 
 def main():
@@ -383,14 +382,12 @@ def main():
         generate_statistical_summary(df1, df2, merged_data)
         
         print("\n✅ All visualizations created successfully!")
-        print_file_locations()
-        print("� Generated visualizations:")
-        print(f"  - {get_visualization_path('config_distribution_comparison.png')}")
-        print(f"  - {get_visualization_path('config_boxplot_comparison.png')}")
-        print(f"  - {get_visualization_path('config_scatter_correlation.png')}")
-        print(f"  - {get_visualization_path('config_bland_altman.png')}")
-        print("📋 Generated reports:")
-        print(f"  - {get_report_path('configuration_comparison_report.txt')}")
+        print("📁 Generated files:")
+        print("  - config_distribution_comparison.png")
+        print("  - config_boxplot_comparison.png")
+        print("  - config_scatter_correlation.png")
+        print("  - config_bland_altman.png")
+        print("  - configuration_comparison_report.txt")
         
     except Exception as e:
         print(f"❌ Visualization creation failed: {e}")

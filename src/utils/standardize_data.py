@@ -16,6 +16,7 @@ from sqlalchemy import create_engine, text
 from datetime import datetime
 import logging
 import sys
+from src.utils.file_paths import get_log_path
 from config_local import DB_CONFIG
 from config_silver import (
     OMOP_MAPPING, UNIT_CONVERSIONS, CLINICAL_LIMITS, 
@@ -43,7 +44,7 @@ class SilverLayerProcessor:
         logger.setLevel(logging.INFO)
         
         # File handler
-        file_handler = logging.FileHandler('standardize.log')
+        file_handler = logging.FileHandler(get_log_path('standardize.log'))
         file_formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
@@ -439,7 +440,7 @@ def main():
     
     if processor.run():
         print("\n✅ Silver layer processing completed successfully!")
-        print("📊 Check 'standardize.log' for detailed processing logs")
+        print("📊 Check 'logs/standardize.log' for detailed processing logs")
     else:
         print("\n❌ Silver layer processing failed!")
         sys.exit(1)

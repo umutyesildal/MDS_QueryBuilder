@@ -25,6 +25,7 @@ from sqlalchemy import create_engine, text
 from datetime import datetime
 import logging
 from typing import Dict, List, Any
+from src.utils.file_paths import get_log_path, get_report_path
 
 # Import configurations
 from config_local import DB_CONFIG
@@ -66,7 +67,7 @@ class EnhancedSilverBuilder:
         logger.setLevel(logging.INFO)
         
         # Create handlers
-        file_handler = logging.FileHandler('silver_builder.log')
+        file_handler = logging.FileHandler(get_log_path('silver_builder.log'))
         console_handler = logging.StreamHandler()
         
         # Create formatter
@@ -451,10 +452,10 @@ class EnhancedSilverBuilder:
             report.append(f"- **{concept}**: {records:,} records")
         
         # Write report
-        with open('silver_processing_report.md', 'w') as f:
+        with open(get_report_path('silver_processing_report.md'), 'w') as f:
             f.write('\n'.join(report))
         
-        self.logger.info("📋 Processing report saved: silver_processing_report.md")
+        self.logger.info("📋 Processing report saved: docs/reports/silver_processing_report.md")
 
     def build_silver_layer(self):
         """Build complete Silver layer with comprehensive OMOP mapping"""
@@ -501,8 +502,8 @@ def main():
         print(f"   - Quality flags and unit standardization completed")
         print("")
         print("📋 Reports generated:")
-        print("   - silver_processing_report.md")
-        print("   - silver_builder.log")
+        print("   - docs/reports/silver_processing_report.md")
+        print("   - logs/silver_builder.log")
         
         return 0
         

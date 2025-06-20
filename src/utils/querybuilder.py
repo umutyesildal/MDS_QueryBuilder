@@ -16,6 +16,7 @@ import sys
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 import traceback
+from src.utils.file_paths import get_log_path
 
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.exc import SQLAlchemyError
@@ -86,7 +87,7 @@ class QueryBuilder:
         logger.setLevel(logging.INFO)
         
         # Create file handler
-        file_handler = logging.FileHandler('querybuilder.log', mode='w')
+        file_handler = logging.FileHandler(get_log_path('querybuilder.log'), mode='w')
         file_handler.setLevel(logging.INFO)
         
         # Create console handler
@@ -468,11 +469,11 @@ def main():
     
     if success:
         print("\n🎉 QueryBuilder execution completed successfully!")
-        print("📄 Check 'querybuilder.log' for detailed logs")
+        print("📄 Check 'logs/querybuilder.log' for detailed logs")
         print("🔍 Query the bronze.collection_disease table to explore results")
     else:
         print("\n❌ QueryBuilder execution failed!")
-        print("📄 Check 'querybuilder.log' for error details")
+        print("📄 Check 'logs/querybuilder.log' for error details")
         sys.exit(1)
 
 

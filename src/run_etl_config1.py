@@ -6,7 +6,7 @@ ETL Pipeline Execution Script for Configuration 1 (Mean-based)
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import etl_configurations
+from src.config import etl_configurations as configg
 from datetime import datetime
 
 def run_config1_etl():
@@ -16,10 +16,10 @@ def run_config1_etl():
     print("=" * 60)
     
     # Set active configuration
-    etl_configurations.set_active_config(1)
+    configg.set_active_config(1)
     
     # Print configuration details
-    config_summary = etl_configurations.get_config_summary()
+    config_summary = configg.get_config_summary()
     print("📋 Configuration Details:")
     for key, value in config_summary.items():
         print(f"  {key}: {value}")
@@ -33,14 +33,24 @@ def run_config1_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config1")
     
-    # TODO: Import and run your actual ETL pipeline here
-    # Example:
-    # from your_etl_module import run_etl_pipeline
-    # run_etl_pipeline(etl_configurations.ACTIVE_CONFIG)
+    # Run the actual ETL pipeline
+    from src.etl.gold_etl_pipeline import GoldETLPipeline
     
-    print(f"\n✅ ETL Pipeline completed successfully")
-    print(f"📊 Results saved to: {etl_configurations.ACTIVE_CONFIG['output_table']}")
-    print(f"⏰ Completed at: {datetime.now()}")
+    try:
+        # Get current active configuration
+        current_config = configg.ACTIVE_CONFIG
+        
+        # Run ETL pipeline with this configuration
+        pipeline = GoldETLPipeline(current_config)
+        pipeline.run_pipeline()
+        
+        print(f"\n✅ ETL Pipeline completed successfully")
+        print(f"📊 Results saved to: {current_config['output_table']}")
+        print(f"⏰ Completed at: {datetime.now()}")
+        
+    except Exception as e:
+        print(f"❌ ETL Pipeline failed: {e}")
+        raise
 
 if __name__ == "__main__":
     try:

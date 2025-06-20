@@ -133,7 +133,7 @@ get_timestamp() {
 
 # Function to log with timestamp
 log_message() {
-    echo "[$(get_timestamp)] $1" >> pipeline_setup.log
+    echo "[$(get_timestamp)] $1" >> logs/pipeline_setup.log
 }
 
 # Function to activate virtual environment with enhanced error handling
@@ -752,6 +752,14 @@ with engine.connect() as conn:
     if [[ $gold_exists == true && $gold_count -gt 0 ]]; then
         echo ""
         echo -e "${YELLOW}Gold data exists with $gold_count SOFA scores${NC}"
+        
+        # Check if we're in automated setup mode
+        if [[ "${AUTOMATED_SETUP:-false}" == "true" ]]; then
+            print_info "Automated setup detected - preserving existing Gold data"
+            log_message "Gold layer skipped (existing data preserved in automated setup)"
+            return 0
+        fi
+        
         read -p "Re-calculate SOFA scores? (y/N): " recalculate
         if [[ ! $recalculate =~ ^[Yy]$ ]]; then
             print_info "Preserving existing Gold data"
@@ -1021,7 +1029,7 @@ try:
             # Get Gold stats
             result = conn.execute(text('SELECT COUNT(DISTINCT subject_id), MIN(total_sofa_score), MAX(total_sofa_score), ROUND(AVG(total_sofa_score), 2) FROM gold.sofa_scores'))
             patients, min_score, max_score, avg_score = result.fetchone()
-            print(f'   🩺 {patients} patients, SOFA range: {min_score}-{max_score} (avg: {avg_score})')
+            print(f'  🩺 {patients} patients, SOFA range: {min_score}-{max_score} (avg: {avg_score})')
             
         except Exception as e:
             print('🥇 Gold Layer: Not found ❌')
@@ -1290,11 +1298,183 @@ show_help() {
 }
 
 # =============================================================================
+# TASK 5.4 EXECUTION FUNCTION
+# =============================================================================
+
+run_task54_scripts() {
+    print_section "${ROCKET} EXECUTING TASK 5.4 SCRIPTS"
+    
+    print_step "Running ETL Configuration 1 (Mean-based)..."
+    if python3 src/run_etl_config1.py; then
+        print_success "Configuration 1 ETL completed"
+    else
+        print_error "Configuration 1 ETL failed"
+        exit 1
+    fi
+    
+    print_step "Running ETL Configuration 2 (Median-based)..."
+    if python3 src/run_etl_config2.py; then
+        print_success "Configuration 2 ETL completed"
+    else
+        print_error "Configuration 2 ETL failed"
+        exit 1
+    fi
+    
+    print_step "Running Configuration Comparison Analysis..."
+    if python3 src/run_comparison_analysis.py; then
+        print_success "Comparison analysis completed"
+    else
+        print_error "Comparison analysis failed"
+        exit 1
+    fi
+    
+    print_step "Creating Configuration Comparison Visualizations..."
+    if python3 src/create_comparison_visualizations.py; then
+        print_success "Comparison visualizations created"
+    else
+        print_error "Comparison visualizations failed"
+        exit 1
+    fi
+    
+    print_step "Creating Mortality Analysis Visualizations..."
+    if python3 src/create_mortality_visualizations.py; then
+        print_success "Mortality visualizations created"
+    else
+        print_error "Mortality visualizations failed"
+        exit 1
+    fi
+    
+    print_success "All Task 5.4 scripts executed successfully"
+    print_info "📊 Check docs/visualizations/ for generated plots"
+    print_info "📋 Check docs/reports/ for analysis reports"
+}
+
+# =============================================================================
+# MODIFIED FULL SETUP FUNCTION
+# =============================================================================
+
+full_setup_with_task54() {
+    print_banner
+    print_header "${ROCKET} COMPLETE MEDALLION ARCHITECTURE SETUP + TASK 5.4"
+    
+    echo -e "${BLUE}Starting complete healthcare data pipeline setup with dual configurations...${NC}"
+    echo -e "${BLUE}This will process: Raw MIMIC-IV → OMOP Standardized → Clinical SOFA Scores → Dual ETL Configs${NC}"
+    echo ""
+    echo -e "${YELLOW}Timeline: ~20-25 minutes for complete setup with Task 5.4${NC}"
+    echo ""
+    
+    # Verify we're in the right directory
+    if [[ ! -f "config_local.py" && ! -f "config_template.py" ]]; then
+        print_error "Configuration files not found. Please run from the project directory."
+        exit 1
+    fi
+    
+    print_success "Project directory validated"
+    log_message "Full setup with Task 5.4 started"
+    
+    # Environment setup
+    activate_venv
+    install_dependencies
+    check_db_config
+    
+    # Parameter discovery (if needed)
+    discover_sofa_parameters
+    
+    # Execute all pipeline layers
+    setup_bronze_layer
+    setup_silver_layer
+    setup_gold_layer
+    
+    # NEW: Task 5.4 specific setup
+    setup_etl_configurations
+    create_gold_etl_tables
+    create_etl_scripts
+    
+    # NEW: Create visualization scripts
+    create_visualization_scripts
+    
+    # Run etl_configurations.py to initialize and validate
+    print_step "Running etl_configurations.py initialization..."
+    python3 src/config/etl_configurations.py
+    
+    if [ $? -eq 0 ]; then
+        print_success "etl_configurations.py initialized successfully"
+    else
+        print_error "etl_configurations.py initialization failed"
+        exit 1
+    fi
+    
+    # NEW: Run Task 5.4 scripts automatically
+    run_task54_scripts
+    
+    # Final validation
+    if comprehensive_validation; then
+        echo ""
+        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4!"
+        
+        echo ""
+        echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 SETUP SUCCESSFUL! 🎉       ║${NC}"
+        echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
+        echo ""
+        
+        print_success "Virtual environment: $(pwd)/venv"
+        print_success "Database configuration: config_local.py"
+        print_success "Bronze layer: Raw MIMIC-IV data extracted"
+        print_success "Silver layer: OMOP standardization completed"
+        print_success "Gold layer: Clinical SOFA scores calculated"
+        print_success "Task 5.4: Dual ETL configurations ready"
+        print_success "Visualization scripts: Ready for analysis"
+        
+        echo ""
+        print_info "📊 Gold Schema Tables Created:"
+        echo "   - gold.gold_scores_config1 (mean-based configuration)"
+        echo "   - gold.gold_scores_config2 (median-based configuration)"
+        echo "   - gold.config_comparison_analysis (comparison results)"
+        echo "   - gold.mortality_correlation_analysis (outcome analysis)"
+        echo ""
+        print_info "🔧 ETL Scripts Created:"
+        echo "   - src/run_etl_config1.py (execute mean-based ETL)"
+        echo "   - src/run_etl_config2.py (execute median-based ETL)"
+        echo "   - src/run_comparison_analysis.py (compare configurations)"
+        echo ""
+        print_info "🎨 Visualization Scripts Created:"
+        echo "   - src/create_comparison_visualizations.py (configuration comparison plots)"
+        echo "   - src/create_mortality_visualizations.py (mortality analysis plots)"
+        echo ""
+        print_info "📋 Configuration Files:"
+        echo "   - src/config/etl_configurations.py (dual configuration setup)"
+        echo "   - config_local.py (database credentials)"
+        echo ""
+        print_info "🚀 Next Steps for Task 5.4:"
+        echo "   1. Update your ETL pipeline to use configg.ACTIVE_CONFIG"
+        echo "   2. Run: python3 src/run_etl_config1.py"
+        echo "   3. Run: python3 src/run_etl_config2.py"
+        echo "   4. Run: python3 src/run_comparison_analysis.py"
+        echo "   5. Run: python3 src/create_comparison_visualizations.py"
+        echo "   6. Run: python3 src/create_mortality_visualizations.py"
+        echo "   7. Analyze results in gold schema tables and generated plots"
+        echo ""
+        print_info "🔄 To reactivate the environment later:"
+        echo "  source venv/bin/activate"
+        echo ""
+        
+        log_message "Full setup with Task 5.4 completed successfully"
+    else
+        print_error "Setup completed with validation issues"
+        exit 1
+    fi
+    
+    # Deactivate virtual environment
+    deactivate 2>/dev/null || true
+}
+
+# =============================================================================
 # MAIN SCRIPT LOGIC
 # =============================================================================
 
 # Initialize logging
-echo "=== Pipeline Setup Started at $(get_timestamp) ===" > pipeline_setup.log
+echo "=== Pipeline Setup Started at $(get_timestamp) ===" > logs/pipeline_setup.log
 
 # ...existing code...
 
@@ -1611,7 +1791,7 @@ ETL Pipeline Execution Script for Configuration 1 (Mean-based)
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import configg
+from src.config import etl_configurations as configg
 from datetime import datetime
 
 def run_config1_etl():
@@ -1638,14 +1818,24 @@ def run_config1_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config1")
     
-    # TODO: Import and run your actual ETL pipeline here
-    # Example:
-    # from your_etl_module import run_etl_pipeline
-    # run_etl_pipeline(configg.ACTIVE_CONFIG)
+    # Run the actual ETL pipeline
+    from src.etl.gold_etl_pipeline import GoldETLPipeline
     
-    print(f"\n✅ ETL Pipeline completed successfully")
-    print(f"📊 Results saved to: {configg.ACTIVE_CONFIG['output_table']}")
-    print(f"⏰ Completed at: {datetime.now()}")
+    try:
+        # Get current active configuration
+        current_config = configg.ACTIVE_CONFIG
+        
+        # Run ETL pipeline with this configuration
+        pipeline = GoldETLPipeline(current_config)
+        pipeline.run_pipeline()
+        
+        print(f"\n✅ ETL Pipeline completed successfully")
+        print(f"📊 Results saved to: {current_config['output_table']}")
+        print(f"⏰ Completed at: {datetime.now()}")
+        
+    except Exception as e:
+        print(f"❌ ETL Pipeline failed: {e}")
+        raise
 
 if __name__ == "__main__":
     try:
@@ -1666,7 +1856,7 @@ ETL Pipeline Execution Script for Configuration 2 (Median-based)
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import configg
+from src.config import etl_configurations as configg
 from datetime import datetime
 
 def run_config2_etl():
@@ -1693,14 +1883,24 @@ def run_config2_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config2")
     
-    # TODO: Import and run your actual ETL pipeline here
-    # Example:
-    # from your_etl_module import run_etl_pipeline
-    # run_etl_pipeline(configg.ACTIVE_CONFIG)
+    # Run the actual ETL pipeline
+    from src.etl.gold_etl_pipeline import GoldETLPipeline
     
-    print(f"\n✅ ETL Pipeline completed successfully")
-    print(f"📊 Results saved to: {configg.ACTIVE_CONFIG['output_table']}")
-    print(f"⏰ Completed at: {datetime.now()}")
+    try:
+        # Get current active configuration
+        current_config = configg.ACTIVE_CONFIG
+        
+        # Run ETL pipeline with this configuration
+        pipeline = GoldETLPipeline(current_config)
+        pipeline.run_pipeline()
+        
+        print(f"\n✅ ETL Pipeline completed successfully")
+        print(f"📊 Results saved to: {current_config['output_table']}")
+        print(f"⏰ Completed at: {datetime.now()}")
+        
+    except Exception as e:
+        print(f"❌ ETL Pipeline failed: {e}")
+        raise
 
 if __name__ == "__main__":
     try:
@@ -1721,7 +1921,7 @@ Configuration Comparison Analysis Script for Task 5.4
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import configg
+from src.config import etl_configurations as configg
 from datetime import datetime
 
 def run_comparison_analysis():
@@ -1780,7 +1980,6 @@ EOF
 # MODIFIED FULL SETUP FUNCTION
 # =============================================================================
 
-# Add this to the full_setup() function, after setup_gold_layer and before comprehensive_validation
 full_setup_with_task54() {
     print_banner
     print_header "${ROCKET} COMPLETE MEDALLION ARCHITECTURE SETUP + TASK 5.4"
@@ -1818,16 +2017,22 @@ full_setup_with_task54() {
     create_gold_etl_tables
     create_etl_scripts
     
+    # NEW: Create visualization scripts
+    create_visualization_scripts
+    
     # Run etl_configurations.py to initialize and validate
     print_step "Running etl_configurations.py initialization..."
     python3 src/config/etl_configurations.py
     
     if [ $? -eq 0 ]; then
-        print_success "configg.py initialized successfully"
+        print_success "etl_configurations.py initialized successfully"
     else
-        print_error "configg.py initialization failed"
+        print_error "etl_configurations.py initialization failed"
         exit 1
     fi
+    
+    # NEW: Run Task 5.4 scripts automatically
+    run_task54_scripts
     
     # Final validation
     if comprehensive_validation; then
@@ -1846,6 +2051,7 @@ full_setup_with_task54() {
         print_success "Silver layer: OMOP standardization completed"
         print_success "Gold layer: Clinical SOFA scores calculated"
         print_success "Task 5.4: Dual ETL configurations ready"
+        print_success "Visualization scripts: Ready for analysis"
         
         echo ""
         print_info "📊 Gold Schema Tables Created:"
@@ -1855,12 +2061,16 @@ full_setup_with_task54() {
         echo "   - gold.mortality_correlation_analysis (outcome analysis)"
         echo ""
         print_info "🔧 ETL Scripts Created:"
-        echo "   - run_etl_config1.py (execute mean-based ETL)"
-        echo "   - run_etl_config2.py (execute median-based ETL)"
-        echo "   - run_comparison_analysis.py (compare configurations)"
+        echo "   - src/run_etl_config1.py (execute mean-based ETL)"
+        echo "   - src/run_etl_config2.py (execute median-based ETL)"
+        echo "   - src/run_comparison_analysis.py (compare configurations)"
+        echo ""
+        print_info "🎨 Visualization Scripts Created:"
+        echo "   - src/create_comparison_visualizations.py (configuration comparison plots)"
+        echo "   - src/create_mortality_visualizations.py (mortality analysis plots)"
         echo ""
         print_info "📋 Configuration Files:"
-        echo "   - configg.py (dual configuration setup)"
+        echo "   - src/config/etl_configurations.py (dual configuration setup)"
         echo "   - config_local.py (database credentials)"
         echo ""
         print_info "🚀 Next Steps for Task 5.4:"
@@ -1868,7 +2078,9 @@ full_setup_with_task54() {
         echo "   2. Run: python3 src/run_etl_config1.py"
         echo "   3. Run: python3 src/run_etl_config2.py"
         echo "   4. Run: python3 src/run_comparison_analysis.py"
-        echo "   5. Analyze results in gold schema tables"
+        echo "   5. Run: python3 src/create_comparison_visualizations.py"
+        echo "   6. Run: python3 src/create_mortality_visualizations.py"
+        echo "   7. Analyze results in gold schema tables and generated plots"
         echo ""
         print_info "🔄 To reactivate the environment later:"
         echo "  source venv/bin/activate"
@@ -1883,12 +2095,6 @@ full_setup_with_task54() {
     # Deactivate virtual environment
     deactivate 2>/dev/null || true
 }
-
-# =============================================================================
-# MAIN SCRIPT LOGIC MODIFICATION
-# =============================================================================
-
-# ...existing code...
 
 # =============================================================================
 # VISUALIZATION SCRIPTS CREATION - Task 5.4
@@ -1928,7 +2134,7 @@ from scipy.stats import pearsonr, spearmanr
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import configg
+from src.config import etl_configurations as configg
 from config_local import DB_CONFIG
 import psycopg2
 from datetime import datetime
@@ -2324,7 +2530,7 @@ from scipy import stats
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-import configg
+from src.config import etl_configurations as configg
 from config_local import DB_CONFIG
 import psycopg2
 from datetime import datetime
@@ -2714,6 +2920,9 @@ full_setup_with_task54() {
         exit 1
     fi
     
+    # NEW: Run Task 5.4 scripts automatically
+    run_task54_scripts
+    
     # Final validation
     if comprehensive_validation; then
         echo ""
@@ -2750,7 +2959,7 @@ full_setup_with_task54() {
         echo "   - src/create_mortality_visualizations.py (mortality analysis plots)"
         echo ""
         print_info "📋 Configuration Files:"
-        echo "   - configg.py (dual configuration setup)"
+        echo "   - src/config/etl_configurations.py (dual configuration setup)"
         echo "   - config_local.py (database credentials)"
         echo ""
         print_info "🚀 Next Steps for Task 5.4:"
@@ -2776,9 +2985,17 @@ full_setup_with_task54() {
     deactivate 2>/dev/null || true
 }
 
-# Add visualization option to the case statement
+# =============================================================================
+# MAIN SCRIPT LOGIC
+# =============================================================================
+
+# Initialize logging
+echo "=== Pipeline Setup Started at $(get_timestamp) ===" > logs/pipeline_setup.log
+
+# Parse command-line options
 case "${1:-full}" in
     "full"|"")
+        export AUTOMATED_SETUP=true  # Set automated mode for full setup
         full_setup_with_task54  # Use the new function instead of full_setup
         ;;
     "bronze")
@@ -2811,7 +3028,7 @@ case "${1:-full}" in
         create_gold_etl_tables
         create_etl_scripts
         create_visualization_scripts
-        python3 src/config/configg.py
+        python3 src/config/src/config/etl_configurations.py
         print_success "Task 5.4 setup completed"
         deactivate 2>/dev/null || true
         ;;
@@ -2842,7 +3059,7 @@ case "${1:-full}" in
         ;;
 esac
 
-echo "=== Pipeline Setup Completed at $(get_timestamp) ===" >> pipeline_setup.log
+echo "=== Pipeline Setup Completed at $(get_timestamp) ===" >> logs/pipeline_setup.log
 
 
 

@@ -20,13 +20,9 @@ from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 import logging
 import sys
-import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
-from etl_configurations import *
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from src.config.etl_configurations import *
 from config_local import DB_CONFIG
 
 class GoldETLPipeline:
