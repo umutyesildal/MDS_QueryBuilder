@@ -13,12 +13,14 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
 from src.config import etl_configurations as configg
-from src.utils.file_paths import get_visualization_path, get_report_path
 from config_local import DB_CONFIG
 import psycopg2
 from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
+
+# Import file paths utility
+from src.utils.file_paths import get_visualization_path, get_report_path
 
 # Set visualization style
 plt.style.use('seaborn-v0_8')
@@ -111,9 +113,11 @@ def create_mortality_by_score_plots(df):
             ax.text(0.5, 0.5, f'Missing columns for {score_col}', transform=ax.transAxes, ha='center')
     
     plt.tight_layout()
-    filepath = get_visualization_path('mortality_by_scores.png')
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    print(f"✅ Mortality by scores plot saved as '{filepath}'")
+    
+    # Use proper file path
+    output_path = get_visualization_path('mortality_by_scores.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Mortality by scores plot saved as '{output_path}'")
     return fig
 
 def create_score_distribution_by_mortality(df):
@@ -161,9 +165,11 @@ def create_score_distribution_by_mortality(df):
             ax.text(0.5, 0.5, f'Missing columns for {score_col}', transform=ax.transAxes, ha='center')
     
     plt.tight_layout()
-    filepath = get_visualization_path('score_distribution_by_mortality.png')
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    print(f"✅ Score distribution by mortality saved as '{filepath}'")
+    
+    # Use proper file path
+    output_path = get_visualization_path('score_distribution_by_mortality.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Score distribution by mortality saved as '{output_path}'")
     return fig
 
 def create_age_stratified_analysis(df):
@@ -205,8 +211,11 @@ def create_age_stratified_analysis(df):
     ax2.set_ylabel('SOFA Score')
     
     plt.tight_layout()
-    plt.savefig('age_stratified_analysis.png', dpi=300, bbox_inches='tight')
-    print("✅ Age-stratified analysis saved as 'age_stratified_analysis.png'")
+    
+    # Use proper file path
+    output_path = get_visualization_path('age_stratified_analysis.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Age-stratified analysis saved as '{output_path}'")
     return fig
 
 def create_correlation_heatmap(df):
@@ -244,9 +253,11 @@ def create_correlation_heatmap(df):
         axes[i].set_title(f'Correlation Matrix - {config}')
     
     plt.tight_layout()
-    filepath = get_visualization_path('correlation_heatmap.png')
-    plt.savefig(filepath, dpi=300, bbox_inches='tight')
-    print(f"✅ Correlation heatmap saved as '{filepath}'")
+    
+    # Use proper file path
+    output_path = get_visualization_path('correlation_heatmap.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Correlation heatmap saved as '{output_path}'")
     return fig
 
 def generate_mortality_report(df):
@@ -287,11 +298,12 @@ def generate_mortality_report(df):
                 if len(score_data) > 0:
                     report.append(f"    {score_col}: mean={score_data.mean():.2f}, std={score_data.std():.2f}")
     
-    # Save report
-    with open('mortality_analysis_report.txt', 'w') as f:
+    # Use proper file path for report
+    report_path = get_report_path('mortality_analysis_report.txt')
+    with open(report_path, 'w') as f:
         f.write('\n'.join(report))
     
-    print("✅ Mortality analysis report saved as 'mortality_analysis_report.txt'")
+    print(f"✅ Mortality analysis report saved as '{report_path}'")
     return report
 
 def main():

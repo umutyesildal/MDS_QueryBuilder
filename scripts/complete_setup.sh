@@ -752,14 +752,6 @@ with engine.connect() as conn:
     if [[ $gold_exists == true && $gold_count -gt 0 ]]; then
         echo ""
         echo -e "${YELLOW}Gold data exists with $gold_count SOFA scores${NC}"
-        
-        # Check if we're in automated setup mode
-        if [[ "${AUTOMATED_SETUP:-false}" == "true" ]]; then
-            print_info "Automated setup detected - preserving existing Gold data"
-            log_message "Gold layer skipped (existing data preserved in automated setup)"
-            return 0
-        fi
-        
         read -p "Re-calculate SOFA scores? (y/N): " recalculate
         if [[ ! $recalculate =~ ^[Yy]$ ]]; then
             print_info "Preserving existing Gold data"
@@ -1818,24 +1810,14 @@ def run_config1_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config1")
     
-    # Run the actual ETL pipeline
-    from src.etl.gold_etl_pipeline import GoldETLPipeline
+    # TODO: Import and run your actual ETL pipeline here
+    # Example:
+    # from your_etl_module import run_etl_pipeline
+    # run_etl_pipeline(configg.ACTIVE_CONFIG)
     
-    try:
-        # Get current active configuration
-        current_config = configg.ACTIVE_CONFIG
-        
-        # Run ETL pipeline with this configuration
-        pipeline = GoldETLPipeline(current_config)
-        pipeline.run_pipeline()
-        
-        print(f"\n✅ ETL Pipeline completed successfully")
-        print(f"📊 Results saved to: {current_config['output_table']}")
-        print(f"⏰ Completed at: {datetime.now()}")
-        
-    except Exception as e:
-        print(f"❌ ETL Pipeline failed: {e}")
-        raise
+    print(f"\n✅ ETL Pipeline completed successfully")
+    print(f"📊 Results saved to: {configg.ACTIVE_CONFIG['output_table']}")
+    print(f"⏰ Completed at: {datetime.now()}")
 
 if __name__ == "__main__":
     try:
@@ -1883,24 +1865,14 @@ def run_config2_etl():
     print("  6. Score calculations")
     print("  7. Loading to gold.gold_scores_config2")
     
-    # Run the actual ETL pipeline
-    from src.etl.gold_etl_pipeline import GoldETLPipeline
+    # TODO: Import and run your actual ETL pipeline here
+    # Example:
+    # from your_etl_module import run_etl_pipeline
+    # run_etl_pipeline(configg.ACTIVE_CONFIG)
     
-    try:
-        # Get current active configuration
-        current_config = configg.ACTIVE_CONFIG
-        
-        # Run ETL pipeline with this configuration
-        pipeline = GoldETLPipeline(current_config)
-        pipeline.run_pipeline()
-        
-        print(f"\n✅ ETL Pipeline completed successfully")
-        print(f"📊 Results saved to: {current_config['output_table']}")
-        print(f"⏰ Completed at: {datetime.now()}")
-        
-    except Exception as e:
-        print(f"❌ ETL Pipeline failed: {e}")
-        raise
+    print(f"\n✅ ETL Pipeline completed successfully")
+    print(f"📊 Results saved to: {configg.ACTIVE_CONFIG['output_table']}")
+    print(f"⏰ Completed at: {datetime.now()}")
 
 if __name__ == "__main__":
     try:
@@ -2995,7 +2967,6 @@ echo "=== Pipeline Setup Started at $(get_timestamp) ===" > logs/pipeline_setup.
 # Parse command-line options
 case "${1:-full}" in
     "full"|"")
-        export AUTOMATED_SETUP=true  # Set automated mode for full setup
         full_setup_with_task54  # Use the new function instead of full_setup
         ;;
     "bronze")

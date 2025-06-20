@@ -49,8 +49,8 @@ def run_config1_etl():
         print(f"⏰ Completed at: {datetime.now()}")
         
     except Exception as e:
-        print(f"❌ ETL Pipeline failed: {e}")
-        raise
+        print(f"❌ ETL Pipeline execution failed: {e}")
+        raise e
 
 if __name__ == "__main__":
     try:
