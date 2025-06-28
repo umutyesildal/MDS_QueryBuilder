@@ -36,8 +36,7 @@
     "verbose": 0,
     "warm_start": false
   },
-  "feature_count": null,
-  "training_date": "2025-06-28T20:58:57.310491",
+  "training_date": "2025-06-28T21:21:38.621695",
   "data_balancing": "SMOTE",
   "validation_strategy": "temporal_split"
 }
