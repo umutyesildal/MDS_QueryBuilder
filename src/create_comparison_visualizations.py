@@ -20,9 +20,6 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
-# Import file paths utility
-from src.utils.file_paths import get_visualization_path, get_report_path
-
 # Set visualization style
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
@@ -95,11 +92,8 @@ def create_distribution_comparison(df1, df2, config_tables):
                    transform=ax.transAxes, ha='center', va='center')
     
     plt.tight_layout()
-    
-    # Use proper file path
-    output_path = get_visualization_path('config_distribution_comparison.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Distribution comparison saved as '{output_path}'")
+    plt.savefig('config_distribution_comparison.png', dpi=300, bbox_inches='tight')
+    print("✅ Distribution comparison saved as 'config_distribution_comparison.png'")
     return fig
 
 def create_boxplot_comparison(df1, df2, config_tables):
@@ -142,11 +136,8 @@ def create_boxplot_comparison(df1, df2, config_tables):
         plt.xticks(rotation=45)
         
         plt.tight_layout()
-        
-        # Use proper file path
-        output_path = get_visualization_path('config_boxplot_comparison.png')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"✅ Box plot comparison saved as '{output_path}'")
+        plt.savefig('config_boxplot_comparison.png', dpi=300, bbox_inches='tight')
+        print("✅ Box plot comparison saved as 'config_boxplot_comparison.png'")
         return fig
     else:
         print("⚠️ No data available for box plot comparison")
@@ -215,11 +206,8 @@ def create_scatter_correlation_plot(df1, df2, config_tables):
         ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    
-    # Use proper file path
-    output_path = get_visualization_path('config_scatter_correlation.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Scatter correlation plot saved as '{output_path}'")
+    plt.savefig('config_scatter_correlation.png', dpi=300, bbox_inches='tight')
+    print("✅ Scatter correlation plot saved as 'config_scatter_correlation.png'")
     return fig, merged_data
 
 def create_bland_altman_plot(merged_data):
@@ -283,11 +271,8 @@ def create_bland_altman_plot(merged_data):
         ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    
-    # Use proper file path
-    output_path = get_visualization_path('config_bland_altman.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"✅ Bland-Altman plot saved as '{output_path}'")
+    plt.savefig('config_bland_altman.png', dpi=300, bbox_inches='tight')
+    print("✅ Bland-Altman plot saved as 'config_bland_altman.png'")
     return fig
 
 def generate_statistical_summary(df1, df2, merged_data):
@@ -354,12 +339,11 @@ def generate_statistical_summary(df1, df2, merged_data):
         
         summary_report.append("")
     
-    # Use proper file path for report
-    report_path = get_report_path('configuration_comparison_report.txt')
-    with open(report_path, 'w') as f:
+    # Save report
+    with open('configuration_comparison_report.txt', 'w') as f:
         f.write('\n'.join(summary_report))
     
-    print(f"✅ Statistical summary saved as '{report_path}'")
+    print("✅ Statistical summary saved as 'configuration_comparison_report.txt'")
     return summary_report
 
 def main():
@@ -383,11 +367,7 @@ def main():
         create_boxplot_comparison(df1, df2, config_tables)
         
         # Scatter correlation plot
-        scatter_result = create_scatter_correlation_plot(df1, df2, config_tables)
-        if scatter_result is not None:
-            scatter_fig, merged_data = scatter_result
-        else:
-            merged_data = None
+        scatter_fig, merged_data = create_scatter_correlation_plot(df1, df2, config_tables)
         
         # Bland-Altman plot
         create_bland_altman_plot(merged_data)

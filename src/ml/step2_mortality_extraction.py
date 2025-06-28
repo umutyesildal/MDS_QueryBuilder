@@ -13,28 +13,62 @@ import os
 import json
 import pandas as pd
 import numpy as np
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from sqlalchemy import create_engine
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from config_local import DB_CONFIG
-from src.utils.file_paths import get_log_path, get_report_path
-from sqlalchemy import create_engine
-import logging
+from src.utils.file_paths import get_report_path
+
+# Color codes for terminal output
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def print_success(message):
+    """Print success message in green"""
+    print(f"{Colors.OKGREEN}✅ {message}{Colors.ENDC}")
+
+def print_info(message):
+    """Print info message in blue"""
+    print(f"{Colors.OKBLUE}ℹ️  {message}{Colors.ENDC}")
+
+def print_warning(message):
+    """Print warning message in yellow"""
+    print(f"{Colors.WARNING}⚠️  {message}{Colors.ENDC}")
+
+def print_error(message):
+    """Print error message in red"""
+    print(f"{Colors.FAIL}❌ {message}{Colors.ENDC}")
+
+def print_header(message):
+    """Print header message in bold"""
+    print(f"\n{Colors.HEADER}{Colors.BOLD}🏥 {message}{Colors.ENDC}")
 
 class MortalityDataExtractor:
     """Extract and integrate mortality data with SOFA scores"""
     
     def __init__(self):
-        self.setup_logging()
         self.engine = self.create_db_connection()
+        self.setup_logging()
         
     def setup_logging(self):
-        """Setup logging for mortality extraction"""
-        log_path = get_log_path('ml_mortality_extraction.log')
+        """Setup logging configuration"""
+        log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs', 'ml_mortality_extraction.log')
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -50,15 +84,15 @@ class MortalityDataExtractor:
         try:
             connection_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
             engine = create_engine(connection_string)
-            self.logger.info("✅ Database connection established")
+            print_success("Database connection established")
             return engine
         except Exception as e:
-            self.logger.error(f"❌ Database connection failed: {e}")
+            print_error(f"Database connection failed: {e}")
             raise
             
     def extract_icu_mortality_data(self):
         """Extract ICU-level mortality information"""
-        self.logger.info("🔍 Extracting ICU mortality data...")
+        print_info("Extracting ICU mortality data...")
         
         query_icu_mortality = """
         SELECT 
@@ -82,15 +116,15 @@ class MortalityDataExtractor:
         
         mortality_df = pd.read_sql(query_icu_mortality, self.engine)
         
-        self.logger.info(f"📊 Total ICU stays: {len(mortality_df):,}")
-        self.logger.info(f"💀 48-hour mortality cases: {mortality_df['mortality_48h'].sum()}")
-        self.logger.info(f"📈 48-hour mortality rate: {mortality_df['mortality_48h'].mean()*100:.2f}%")
+        print_info(f"Total ICU stays: {len(mortality_df):,}")
+        print_info(f"48-hour mortality cases: {mortality_df['mortality_48h'].sum()}")
+        print_info(f"48-hour mortality rate: {mortality_df['mortality_48h'].mean()*100:.2f}%")
         
         return mortality_df
         
     def create_time_aware_dataset(self):
         """Create dataset with 48-hour prediction windows"""
-        self.logger.info("⏰ Creating time-aware dataset with 48-hour prediction windows...")
+        print_info("Creating time-aware dataset with 48-hour prediction windows...")
         
         query_time_aware = """
         WITH sofa_with_mortality AS (

@@ -1,13 +1,31 @@
 # 🤖 Machine Learning Pipeline for 48-Hour ICU Mortality Prediction
 
 **Medical Data Science - Übung 5 Implementation**  
-*Using MIMIC-IV SOFA Scores for Mortality Prediction*
+*Using MIMIC-IV SOFA Scores for Clinical Decision Support*
 
 ---
 
 ## 🎯 **Objective**
 
-Develop a clean, academic, and reproducible machine learning pipeline for predicting 48-hour ICU mortality using SOFA (Sequential Organ Failure Assessment) scores and clinical data from the MIMIC-IV database.
+Develop a clean, academic, and reproducible machine learning pipeline for predicting 48-hour ICU mortality using SOFA (Sequential Organ Failure Assessment) scores and clinical data from the MIMIC-IV database. This implementation follows academic best practices and provides comprehensive explainable AI for clinical decision support.
+
+---
+
+## 🚀 **Quick Start**
+
+Run the complete pipeline with a single command:
+
+```bash
+./setup_ml_pipeline.sh
+```
+
+This enhanced setup script will:
+- ✅ Execute all 6 pipeline steps sequentially
+- 📊 Display real-time data statistics and insights
+- 🎯 Show model performance metrics
+- 📈 Generate comprehensive visualizations
+- ✅ Validate academic compliance against Übung 5 requirements
+- 📝 Provide detailed progress reporting with colored output
 
 ---
 
@@ -15,28 +33,42 @@ Develop a clean, academic, and reproducible machine learning pipeline for predic
 
 ### **Libraries Used (Professor Approved)**
 - **pandas** - Data manipulation and analysis
-- **numpy** - Numerical computing
+- **numpy** - Numerical computing  
 - **scikit-learn** - Machine learning algorithms and preprocessing
 - **matplotlib/seaborn** - Data visualization
-- **SHAP** - Explainable AI (planned for advanced steps)
-- **Darts** - Time series forecasting (planned for advanced steps)
+- **SHAP** - Explainable AI for clinical interpretability
+- **imbalanced-learn** - SMOTE for class imbalance handling
 
 ### **Academic Standards**
-- ✅ Clean, well-documented code
-- ✅ Step-by-step implementation
-- ✅ Comprehensive logging and reporting
-- ✅ Reproducible results with proper train/test splitting
-- ✅ No spaghetti code - modular approach
+- ✅ Clean, well-documented code with comprehensive logging
+- ✅ Step-by-step modular implementation
+- ✅ Temporal data splitting (no data leakage)
+- ✅ Class imbalance handling with SMOTE
+- ✅ Comprehensive model evaluation metrics
+- ✅ Explainable AI with SHAP values
+- ✅ Enhanced monitoring and metadata tracking
+- ✅ Reproducible results with fixed random seeds
 
 ---
 
-## 🏗️ **Pipeline Architecture**
+## 🏗️ **Enhanced Pipeline Architecture**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Step 1-2:     │    │   Step 3-4:     │    │   Step 5-7:     │
-│ Data Setup &    │───▶│ EDA & Feature   │───▶│ Modeling &      │
-│ Extraction      │    │ Engineering     │    │ Evaluation      │
+│   Steps 1-2:    │    │   Steps 3-4:    │    │   Steps 5-6:    │
+│ Data Setup &    │───▶│ EDA & Feature   │───▶│ Enhanced ML &   │
+│ Extraction      │    │ Engineering     │    │ XAI Analysis    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+          │                       │                       │
+          ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ • Database      │    │ • Temporal      │    │ • SMOTE         │
+│   Validation    │    │   Splitting     │    │   Balancing     │
+│ • SOFA Scores   │    │ • Class         │    │ • SHAP          │
+│ • Mortality     │    │   Imbalance     │    │   Explanations  │
+│   Extraction    │    │   Analysis      │    │ • Clinical      │
+│                 │    │ • Feature       │    │   Validation    │
+│                 │    │   Engineering   │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -46,8 +78,39 @@ Develop a clean, academic, and reproducible machine learning pipeline for predic
 
 ```
 src/ml/
-├── README.md                           # This file
+├── README.md                           # This comprehensive guide
+├── setup_ml_pipeline.sh               # 🚀 Enhanced one-click pipeline execution
 ├── step1_environment_setup.py          # Data verification & environment setup
+├── step2_mortality_extraction.py       # 48h mortality extraction & target creation
+├── step3_exploratory_analysis.py       # Comprehensive EDA with visualizations
+├── step4_feature_engineering.py        # Feature engineering & temporal splitting
+├── step5_enhanced_models.py            # Enhanced model training with monitoring
+├── step6_explainable_ai.py            # SHAP analysis & clinical interpretability
+├── ml_task_checker.py                  # Academic compliance validation
+└── requirements_ml.txt                 # Python dependencies
+```
+
+---
+
+## 📊 **Data Pipeline Overview**
+
+### **Input Data**
+- **Source**: MIMIC-IV Critical Care Database
+- **Primary Table**: `gold.sofa_scores` (from previous ETL pipeline)
+- **Target**: 48-hour ICU mortality prediction
+- **Features**: SOFA component scores, temporal features, clinical measurements
+
+### **Data Processing**
+1. **Temporal Windows**: 48-hour prediction horizons
+2. **Class Balancing**: SMOTE oversampling (handles 13.2:1 imbalance)
+3. **Feature Engineering**: Temporal features, score derivatives
+4. **Splitting Strategy**: Temporal train/validation/test (70/15/15)
+
+### **Quality Assurance**
+- ✅ Missing value imputation with median strategy
+- ✅ Temporal integrity validation
+- ✅ Class distribution monitoring
+- ✅ Feature correlation analysis
 ├── step2_mortality_extraction.py       # 48h mortality data extraction
 ├── step3_exploratory_analysis.py       # Comprehensive EDA
 ├── step4_feature_engineering.py        # Feature engineering & temporal splitting

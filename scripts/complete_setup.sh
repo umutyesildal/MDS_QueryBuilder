@@ -1252,10 +1252,11 @@ show_help() {
     echo "  ./complete_setup.sh [option]"
     echo ""
     echo -e "${CYAN}OPTIONS:${NC}"
-    echo -e "  ${GREEN}full${NC}        Complete setup (Bronze + Silver + Gold) ${YELLOW}[DEFAULT]${NC}"
+    echo -e "  ${GREEN}full${NC}        Complete setup (Bronze + Silver + Gold + Task 5.4 + ML Pipeline) ${YELLOW}[DEFAULT]${NC}"
     echo -e "  ${GREEN}bronze${NC}      Bronze layer only (raw data extraction)"
     echo -e "  ${GREEN}silver${NC}      Silver layer only (OMOP standardization)"
     echo -e "  ${GREEN}gold${NC}        Gold layer only (SOFA score calculation)"
+    echo -e "  ${GREEN}ml${NC}          ML pipeline only (mortality prediction)"
     echo -e "  ${GREEN}discover${NC}    SOFA parameter discovery only"
     echo -e "  ${GREEN}validate${NC}    Comprehensive pipeline validation"
     echo -e "  ${GREEN}status${NC}      Show current pipeline status"
@@ -1263,10 +1264,11 @@ show_help() {
     echo -e "  ${GREEN}help${NC}        Show this help message"
     echo ""
     echo -e "${CYAN}EXAMPLES:${NC}"
-    echo "  ./complete_setup.sh           # Complete medallion architecture setup"
+    echo "  ./complete_setup.sh           # Complete medallion architecture + Task 5.4 + ML pipeline"
     echo "  ./complete_setup.sh bronze    # Extract raw MIMIC-IV data only"
     echo "  ./complete_setup.sh silver    # Standardize existing Bronze data"
     echo "  ./complete_setup.sh gold      # Calculate SOFA scores from Silver data"
+    echo "  ./complete_setup.sh ml        # Run ML pipeline for mortality prediction"
     echo "  ./complete_setup.sh status    # Check current pipeline status"
     echo "  ./complete_setup.sh validate  # Validate entire pipeline"
     echo ""
@@ -1402,11 +1404,11 @@ full_setup_with_task54() {
     # Final validation
     if comprehensive_validation; then
         echo ""
-        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4!"
+        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4 + ML PIPELINE!"
         
         echo ""
         echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 SETUP SUCCESSFUL! 🎉       ║${NC}"
+        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 + ML PIPELINE SETUP SUCCESSFUL! 🎉       ║${NC}"
         echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
         echo ""
         
@@ -2009,11 +2011,11 @@ full_setup_with_task54() {
     # Final validation
     if comprehensive_validation; then
         echo ""
-        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4!"
+        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4 + ML PIPELINE!"
         
         echo ""
         echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 SETUP SUCCESSFUL! 🎉       ║${NC}"
+        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 + ML PIPELINE SETUP SUCCESSFUL! 🎉       ║${NC}"
         echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
         echo ""
         
@@ -2846,9 +2848,9 @@ full_setup_with_task54() {
     print_header "${ROCKET} COMPLETE MEDALLION ARCHITECTURE SETUP + TASK 5.4"
     
     echo -e "${BLUE}Starting complete healthcare data pipeline setup with dual configurations...${NC}"
-    echo -e "${BLUE}This will process: Raw MIMIC-IV → OMOP Standardized → Clinical SOFA Scores → Dual ETL Configs → Visualizations${NC}"
+    echo -e "${BLUE}This will process: Raw MIMIC-IV → OMOP Standardized → Clinical SOFA Scores → Dual ETL Configs → Visualizations → ML Pipeline${NC}"
     echo ""
-    echo -e "${YELLOW}Timeline: ~20-25 minutes for complete setup with Task 5.4${NC}"
+    echo -e "${YELLOW}Timeline: ~25-30 minutes for complete setup with Task 5.4 + ML Pipeline${NC}"
     echo ""
     
     # Verify we're in the right directory
@@ -2895,14 +2897,23 @@ full_setup_with_task54() {
     # NEW: Run Task 5.4 scripts automatically
     run_task54_scripts
     
+    # NEW: Run ML Pipeline automatically
+    print_section "${ROCKET} ML PIPELINE EXECUTION"
+    print_info "Running ML Pipeline for 48h mortality prediction..."
+    if [ -f "${PROJECT_ROOT}/setup_ml_pipeline.sh" ]; then
+        bash "${PROJECT_ROOT}/setup_ml_pipeline.sh"
+        print_success "ML Pipeline completed successfully"
+    else
+        print_warning "setup_ml_pipeline.sh not found, skipping ML pipeline"
+    fi
     # Final validation
     if comprehensive_validation; then
         echo ""
-        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4!"
+        print_header "${MEDAL} SETUP COMPLETE WITH TASK 5.4 + ML PIPELINE!"
         
         echo ""
         echo -e "${GREEN}╔══════════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 SETUP SUCCESSFUL! 🎉       ║${NC}"
+        echo -e "${GREEN}║     🎉 MEDALLION ARCHITECTURE + TASK 5.4 + ML PIPELINE SETUP SUCCESSFUL! 🎉       ║${NC}"
         echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════════╝${NC}"
         echo ""
         
@@ -2978,6 +2989,21 @@ case "${1:-full}" in
     "gold")
         gold_only_setup
         ;;
+    "ml")
+        # ML Pipeline setup only
+        print_banner
+        print_header "${ROCKET} ML PIPELINE SETUP ONLY"
+        activate_venv
+        print_info "Running ML Pipeline Setup..."
+        if [ -f "${PROJECT_ROOT}/setup_ml_pipeline.sh" ]; then
+            bash "${PROJECT_ROOT}/setup_ml_pipeline.sh"
+        else
+            print_error "setup_ml_pipeline.sh not found!"
+            exit 1
+        fi
+        print_success "ML Pipeline setup completed"
+        deactivate 2>/dev/null || true
+        ;;
     "discover")
         discovery_only
         ;;
@@ -3018,6 +3044,7 @@ case "${1:-full}" in
     "help"|"-h"|"--help")
         # Update help to include visualization options
         show_help
+        echo -e "  ${GREEN}ml${NC}          ML pipeline only (mortality prediction)"
         echo -e "  ${GREEN}task54${NC}      Task 5.4 setup only (dual configurations + visualizations)"
         echo -e "  ${GREEN}visualize${NC}   Create visualization scripts only"
         echo ""
