@@ -1,0 +1,2 @@
+# This file keeps the visualizations directory in version control
+# The actual visualization files are excluded by .gitignore

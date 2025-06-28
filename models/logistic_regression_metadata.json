@@ -1,0 +1,39 @@
+{
+  "model_name": "logistic_regression",
+  "model_type": "LogisticRegression",
+  "training_metrics": {
+    "train_auc": 0.9996038931643277,
+    "val_auc": 0.9615384615384616,
+    "train_f1": 0.9894736842105263,
+    "val_f1": 0.0
+  },
+  "test_metrics": {
+    "roc_auc": 0.7288629737609329,
+    "pr_auc": 0.3771181199752628,
+    "f1": 0.16666666666666666,
+    "precision": 0.2,
+    "recall": 0.14285714285714285,
+    "accuracy": 0.8214285714285714
+  },
+  "hyperparameters": {
+    "C": 1.0,
+    "class_weight": null,
+    "dual": false,
+    "fit_intercept": true,
+    "intercept_scaling": 1,
+    "l1_ratio": null,
+    "max_iter": 1000,
+    "multi_class": "deprecated",
+    "n_jobs": null,
+    "penalty": "l2",
+    "random_state": 42,
+    "solver": "lbfgs",
+    "tol": 0.0001,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "feature_count": null,
+  "training_date": "2025-06-28T20:58:57.307503",
+  "data_balancing": "SMOTE",
+  "validation_strategy": "temporal_split"
+}

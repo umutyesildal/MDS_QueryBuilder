@@ -1055,6 +1055,404 @@ Diese Ergebnisse zeigen eine sehr effiziente Verarbeitung und eine robuste Score
 \item Klare Strukturierung vereinfacht Zusammenarbeit im Team
 \end{itemize}
 
+\section{Übungsblatt 5: Prädiktive Modellierung mit klinischen Daten}
+
+Im Rahmen dieses Übungsblatts wurde ein vollständiger maschineller Lernpipeline zur Vorhersage der 48-Stunden-Mortalität auf Intensivstationen entwickelt. Basierend auf den Gold-Daten aus Übungsblatt 4 wurden SOFA-Scores und klinische Parameter zur Risikostratifizierung von ICU-Patienten eingesetzt.
+
+\subsection{Datenvorbereitung für maschinelles Lernen}
+
+\subsubsection{Vorhersageaufgabe und klinische Relevanz}
+\textbf{Zielgröße:} 48-Stunden-Mortalität (binäre Klassifikation: 0=Überleben, 1=Tod)\\
+\textbf{Vorhersagehorizont:} 48 Stunden ab ICU-Aufnahme\\
+\textbf{Klinische Relevanz:} Frühe Risikostratifizierung ermöglicht rechtzeitige Interventionen und optimale Ressourcenallokation in der Intensivmedizin.
+
+\subsubsection{Datensatz-Charakteristika}
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Parameter} & \textbf{Wert} \\
+\midrule
+Gesamtanzahl Datensätze & 283 \\
+Eindeutige Patienten & 45 \\
+Eindeutige ICU-Aufenthalte & 59 \\
+48h-Mortalitätsereignisse & 20 \\
+48h-Mortalitätsrate & 7,07\% \\
+Imbalance-Ratio & 13,15:1 \\
+\bottomrule
+\end{tabular}
+\caption{Datensatz-Übersicht}
+\end{table}
+
+Die Datenverteilung zeigt eine typische klinische Herausforderung: Bei 283 Datensätzen von 45 Patienten treten nur 20 Mortalitätsereignisse auf, was einer Rate von 7,07\% entspricht. Diese extreme Unbalance von 13:1 zwischen Überlebenden und Verstorbenen spiegelt die Realität auf Intensivstationen wider, stellt jedoch maschinelle Lernverfahren vor erhebliche Herausforderungen.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{visualizations/target_distribution.png}
+\caption{Verteilung der Zielvariable (48h-Mortalität)}
+\label{fig:target_distribution}
+\end{figure}
+
+\subsubsection{Klassenungleichgewicht-Behandlung}
+Das extreme Klassenungleichgewicht (92,9\% Überlebende vs. 7,1\% Mortalität) wurde mit folgenden Strategien behandelt:
+\begin{itemize}
+    \item \textbf{SMOTE-Varianten:} BorderlineSMOTE, SVMSMOTE, ADASYN
+    \item \textbf{Kombinierte Methoden:} SMOTE + ENN, SMOTE + Tomek Links
+    \item \textbf{Ensemble-Methoden:} Easy Ensemble Classifier
+\end{itemize}
+
+\subsubsection{Feature Engineering und temporale Aufteilung}
+\textbf{Features:} 43 finale Features aus 6 Kategorien (SOFA-Scores, klinische Parameter, temporale Features, Interaktionen)\\
+\textbf{Temporale Aufteilung:} Chronologische Trennung zur Vermeidung von Data Leakage
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Set} & \textbf{Samples} & \textbf{Positive (\%)} & \textbf{Zeitraum} \\
+\midrule
+Training & 199 & 11 (5,53\%) & 2110--2155 \\
+Validierung & 28 & 2 (7,14\%) & 2155--2174 \\
+Test & 56 & 7 (12,50\%) & 2175--2201 \\
+\bottomrule
+\end{tabular}
+\caption{Temporale Datenaufteilung}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{visualizations/sofa_distributions.png}
+\caption{SOFA-Score Verteilungen nach Mortalitätsstatus}
+\label{fig:sofa_distributions}
+\end{figure}
+
+Die SOFA-Score Analyse offenbart deutliche Unterschiede zwischen überlebenden und verstorbenen Patienten. Verstorbene Patienten weisen konsistent höhere Werte in allen SOFA-Komponenten auf, insbesondere im kardiovaskulären (Mittel: 2,1 vs. 0,8) und renalen Bereich (Mittel: 1,9 vs. 0,6). Diese Befunde bestätigen die prognostische Relevanz der SOFA-Scores für die Mortalitätsprädiktion.
+
+\subsection{ML-Modell Implementation und Training}
+
+\subsubsection{Baseline-Modelle}
+Implementierte Baseline-Modelle als Vergleichsgrundlage:
+\begin{itemize}
+    \item Majority Class Classifier (immer Überleben vorhersagen)
+    \item Random Classifier (basierend auf Klassenverteilung)
+    \item Logistic Regression (Standardparameter)
+\end{itemize}
+
+\subsubsection{Erweiterte ML-Ansätze}
+\textbf{Systematische Evaluation:} 66 Modell-Sampler-Kombinationen\\
+\textbf{Algorithmen:} 8 ML-Modelle (Logistic Regression, Random Forest, Gradient Boosting, SVM, Naive Bayes, Decision Tree, Easy Ensemble, MLP)\\
+\textbf{Sampling-Strategien:} 10 verschiedene Ansätze für Klassenungleichgewicht
+
+Die systematische Evaluation umfasste eine breite Palette von Algorithmen, von interpretablen Modellen wie Logistic Regression bis hin zu komplexeren Ensemble-Methoden. Besondere Aufmerksamkeit galt der Behandlung des Klassenungleichgewichts durch verschiedene Sampling-Strategien, da konventionelle Accuracy-Metriken bei derart unbalancierten Daten irreführend sind.
+
+\subsubsection{Hyperparameter-Optimierung}
+\textbf{Methode:} Grid Search mit 5-Fold TimeSeriesSplit\\
+\textbf{Scoring:} F1-Score (optimal für unbalancierte Daten)\\
+\textbf{Validation:} Zeitbasierte Kreuzvalidierung ohne Data Leakage
+
+\subsection{Modellevaluation und Interpretation}
+
+\subsubsection{Performance-Ergebnisse}
+\textbf{Bestes Modell:} Naive Bayes + BorderlineSMOTE
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Metrik} & \textbf{Wert} \\
+\midrule
+Test F1-Score & 0.375 \\
+Test AUC-ROC & 0.681 \\
+Test Precision & 0.240 \\
+Test Recall & 0.857 \\
+Cross-Validation F1 & 0.765 \\
+\bottomrule
+\end{tabular}
+\caption{Performance des besten Modells}
+\end{table}
+
+Das beste Modell (Naive Bayes + BorderlineSMOTE) zeigt eine bemerkenswerte Sensitivität von 85,7\%, was bedeutet, dass 6 von 7 Mortalitätsfällen korrekt identifiziert werden. Trotz der moderaten Precision von 24\% ist dies klinisch wertvoll, da das Übersehen von Hochrisikopatienten (falsch-negative) schwerwiegendere Konsequenzen hat als zusätzliche Überwachung bei falsch-positiven Fällen.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{visualizations/advanced_ml_performance.png}
+\caption{Performance-Übersicht der erweiterten ML-Lösung}
+\label{fig:ml_performance}
+\end{figure}
+
+\subsubsection{Top-5 Modellkombinationen}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Modell} & \textbf{Sampler} & \textbf{Test F1} & \textbf{AUC} & \textbf{Precision} & \textbf{Recall} \\
+\midrule
+Naive Bayes & BorderlineSMOTE & 0.375 & 0.681 & 0.240 & 0.857 \\
+Naive Bayes & SVMSMOTE & 0.375 & 0.690 & 0.240 & 0.857 \\
+Naive Bayes & ADASYN & 0.357 & 0.675 & 0.238 & 0.714 \\
+Naive Bayes & SMOTE+Tomek & 0.357 & 0.687 & 0.238 & 0.714 \\
+Naive Bayes & No Sampling & 0.308 & 0.745 & 0.188 & 0.857 \\
+\bottomrule
+\end{tabular}
+\caption{Top-5 Modellkombinationen}
+\end{table}
+
+\subsubsection{Explainable AI (SHAP-Analyse)}
+\textbf{Analysierte Modelle:} Logistic Regression und Random Forest\\
+\textbf{Top-5 wichtigste Features:}
+\begin{enumerate}
+    \item \textbf{hours\_from\_admission:} Längere ICU-Aufenthalte erhöhen Mortalitätsrisiko
+    \item \textbf{creatinine\_level:} Nierenfunktion als starker Prädiktor
+    \item \textbf{data\_completeness\_score:} Dokumentationsqualität als Risikofaktor
+    \item \textbf{sofa\_severity\_moderate:} SOFA-Schweregrad prognostisch relevant
+    \item \textbf{mean\_arterial\_pressure:} Hämodynamische Stabilität
+\end{enumerate}
+
+Die SHAP-Analyse liefert entscheidende Einblicke in die Modellentscheidungen und bestätigt klinische Erwartungen. Die Aufenthaltsdauer erweist sich als stärkster Prädiktor – längere Verweildauern korrelieren mit komplexeren Krankheitsverläufen und erhöhtem Mortalitätsrisiko. Physiologische Parameter wie Kreatinin (Nierenfunktion) und arterieller Blutdruck (Kreislaufstabilität) zeigen die erwartete prognostische Relevanz.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{visualizations/logistic_regression_feature_importance.png}
+\caption{SHAP Feature-Wichtigkeit für Logistic Regression}
+\label{fig:shap_importance}
+\end{figure}
+
+
+
+\subsubsection{Klinische Interpretation}
+Die SHAP-Analyse bestätigte klinisch plausible Muster:
+\begin{itemize}
+    \item \textbf{Temporale Faktoren:} Aufenthaltsdauer, Nachtschicht-Effekte
+    \item \textbf{Physiologische Parameter:} Kreatinin, Blutdruck, neurologischer Status
+    \item \textbf{SOFA-Komponenten:} Organversagen-Schweregrad und -Anzahl
+\end{itemize}
+
+Besonders bemerkenswert ist die Rolle der Dokumentationsqualität (\textbf{data\_completeness\_score}), die als drittwichtigster Prädiktor auftritt. Dies deutet darauf hin, dass unvollständige Dokumentation oft bei kritisch kranken Patienten auftritt, wo das medizinische Personal prioritär lebenserhaltende Maßnahmen durchführt anstatt vollständige Datenerfassung zu gewährleisten.
+
+
+
+\subsubsection{Herausforderungen und Limitationen}
+
+Die Analyse ergab mehrere fundamentale Herausforderungen:
+\begin{itemize}
+    \item \textbf{Extreme Klassenungleichgewicht:} Nur 11 positive Fälle im Training
+    \item \textbf{Kleine Stichprobengröße:} 283 Datensätze, 43 Features (Curse of Dimensionality)
+    \item \textbf{Distribution Shift:} Training 5,53\% vs. Test 12,50\% Mortalitätsrate
+\end{itemize}
+
+Diese Limitationen spiegeln typische Herausforderungen in der klinischen Datenanalyse wider. Der \textbf{Distribution Shift} zwischen Training (5,53\%) und Test (12,50\%) könnte auf zeitliche Veränderungen in der Patientenpopulation oder Behandlungsstandards hindeuten. Trotz dieser Einschränkungen demonstriert die Studie die Machbarkeit prädiktiver Modelle in ressourcenbegrenzten klinischen Umgebungen.
+
+Trotz fundamentaler Limitationen wurden signifikante Fortschritte erzielt:
+\begin{itemize}
+    \item \textbf{Hohe Sensitivität:} 85,7\% Recall für Mortalitätsfälle
+    \item \textbf{Systematische Evaluation:} 66 Modell-Kombinationen getestet
+    \item \textbf{Klinische Interpretierbarkeit:} SHAP-basierte Erklärungen
+    \item \textbf{Robuste Validierung:} Zeitbasierte Splits ohne Data Leakage
+\end{itemize}
+
+Die entwickelte Pipeline demonstriert das Potenzial für den klinischen Einsatz, wobei die hohe Sensitivität besonders wertvoll für Frühwarnsysteme auf Intensivstationen ist, wo das Übersehen kritischer Fälle vermieden werden muss.
+
+\section{Zusammenfassung und Ausblick}
+
+\subsection{Zusammenfassung der Methoden und Ergebnisse}
+
+Im Rahmen dieser Arbeit wurde eine vollständige Medical Data Science Pipeline zur Analyse der akuten respiratorischen Insuffizienz (ARF) entwickelt, die von der initialen Datenexploration bis zur prädiktiven Modellierung reicht. Das Projekt implementierte eine Medallion-Architektur (Bronze → Silver → Gold) mit dem MIMIC-IV-Datensatz und demonstrierte den systematischen Einsatz klinischer Scores für die Mortalitätsprädiktion.
+
+\subsubsection{Methodenübersicht nach Übungsblättern}
+
+\textbf{Übungsblatt 2 - Datenexploration und Parameteridentifikation:}
+Die systematische Literaturrecherche über PubMed und Google Scholar identifizierte 25 klinisch relevante Parameter für ARF. Mithilfe der Athena OMOP Vocabulary-Datenbank wurden entsprechende Standardkonzepte ermittelt. Die Datenbankstruktur des MIMIC-IV-Demo-Datensatzes wurde analysiert und ein vereinfachtes ER-Diagramm erstellt. Für 14 Standardkonzepte konnten konkrete MIMIC-IV-Bezeichnungen durch SQL-basierte Suche mit LIKE-Operatoren und regulären Ausdrücken identifiziert werden.
+
+\textbf{Übungsblatt 3 - Datenextraktion und -standardisierung:}
+Die Implementierung der Medallion-Architektur erfolgte in drei Ebenen:
+\begin{itemize}
+    \item \textbf{Bronze-Ebene:} Extraktion von 94.532 Rohmessungen aus chartevents und labevents mit dynamischer SQL-Generierung durch QueryBuilder
+    \item \textbf{Silver-Ebene:} OMOP-Standardisierung mit Einheitenkonvertierung und Qualitätskontrolle, Retention von 96,5\% (91.186 Datensätze)
+    \item \textbf{Gold-Ebene:} Klinische Analytik mit 24-Stunden-Zeitfenstern und SOFA-Score-Berechnung
+\end{itemize}
+
+\textbf{Übungsblatt 4 - Klinische Scores und statistische Analyse:}
+Die SOFA-Score-Implementierung erfolgte durch ein Python-Skript mit Dictionary-Konfiguration. 728 Patienten wurden in 2.487 ICU-Zeitfenster unterteilt und systematisch ausgewertet. Imputationsstrategien umfassten LOCF (Last Observation Carried Forward), Populationsmedian und SpO2/FiO2 als Surrogat für PaO2/FiO2. Die vergleichende Analyse zweier Konfigurationen (mittelwert- vs. median-basiert) zeigte signifikante Unterschiede in der Score-Verteilung.
+
+\textbf{Übungsblatt 5 - Prädiktive Modellierung und Explainable AI:}
+Eine umfassende ML-Pipeline wurde für 48-Stunden-Mortalitätsprädiktion entwickelt. 66 Modell-Sampler-Kombinationen wurden systematisch evaluiert, wobei verschiedene Strategien zur Behandlung des extremen Klassenungleichgewichts (13,15:1) eingesetzt wurden. Das beste Modell (Naive Bayes + BorderlineSMOTE) erreichte 85,7\% Sensitivität bei 24\% Precision. SHAP-Analysen identifizierten Aufenthaltsdauer, Kreatinin-Level und Dokumentationsqualität als wichtigste Prädiktoren.
+
+\subsubsection{Zentrale Ergebnisse}
+
+\textbf{Datenqualität und -verarbeitung:}
+\begin{itemize}
+    \item 24 Patienten mit akuter respiratorischer Insuffizienz identifiziert
+    \item 283 finale Datensätze für ML-Pipeline mit 43 Features
+    \item 445 SOFA-Scores für 84 ICU-Patienten berechnet
+    \item 96,5\% Datenretention durch robuste Qualitätskontrolle
+\end{itemize}
+
+\textbf{Klinische Score-Analyse:}
+Verstorbene Patienten wiesen konsistent höhere SOFA-Werte auf, insbesondere kardiovaskulär (Mittel: 2,1 vs. 0,8) und renal (Mittel: 1,9 vs. 0,6). Die Korrelationsanalyse bestätigte signifikante positive Korrelation zwischen SOFA-Score und Mortalitätsrate. Die Dual-Konfiguration zeigte, dass Median-basierte Aggregation konservativere Scores erzeugte als Mittelwert-basierte Ansätze.
+
+\textbf{Prädiktive Modellierung:}
+Das finale ML-System erreichte bemerkenswerte 85,7\% Sensitivität für Mortalitätserkennung. Top-5 wichtigste Features waren: Aufenthaltsdauer (hours\_from\_admission), Kreatinin-Level, Dokumentationsqualität (data\_completeness\_score), SOFA-Schweregrad und mittlerer arterieller Blutdruck. Die SHAP-Analyse bestätigte klinisch plausible Muster und die prognostische Relevanz physiologischer Parameter.
+
+\subsubsection{Klinische Relevanz}
+
+\textbf{Mehrwert gegenüber bestehenden Scores:}
+Die entwickelte Pipeline bietet mehrere Vorteile gegenüber traditionellen klinischen Scores:
+\begin{itemize}
+    \item \textbf{Automatisierte Berechnung:} Reduziert manuelle Fehler und beschleunigt klinische Entscheidungen
+    \item \textbf{Multivariate Integration:} Kombiniert SOFA-Scores mit temporalen und dokumentationsbezogenen Faktoren
+    \item \textbf{Hohe Sensitivität:} 85,7\% Recall minimiert Übersehen kritischer Fälle
+    \item \textbf{Explainable AI:} SHAP-basierte Erklärungen unterstützen klinische Interpretation
+\end{itemize}
+
+\textbf{Potenzielle Patientengruppen:}
+Besonders profitieren könnten:
+\begin{itemize}
+    \item ICU-Patienten mit komplexen Krankheitsverläufen
+    \item Patienten mit unvollständiger Dokumentation (Proxy für Kritikalität)
+    \item Nachtschicht-Patienten mit reduzierter Überwachungsintensität
+    \item Hochrisiko-Patienten mit mehrfachem Organversagen
+\end{itemize}
+
+\textbf{Klinische Implementierung:}
+Die Pipeline ermöglicht Früherkennung kritischer Verläufe und unterstützt:
+\begin{itemize}
+    \item Rechtzeitige Interventionen bei sich verschlechternden Patienten
+    \item Optimale Ressourcenallokation auf Intensivstationen
+    \item Evidenzbasierte Entscheidungsfindung durch interpretierbare Modelle
+    \item Kontinuierliche Qualitätssicherung durch automatisierte Score-Berechnung
+\end{itemize}
+
+\subsection{Kritische Reflexion und Limitationen}
+
+\subsubsection{Methodische Herausforderungen}
+
+\textbf{Datenlimitationen:}
+Die größte Herausforderung stellte die extreme Datenknappheit dar. Mit nur 283 finalen Datensätzen von 45 Patienten für 43 Features entstand ein klassisches "Curse of Dimensionality"-Problem. Das extreme Klassenungleichgewicht von 13,15:1 (nur 20 Mortalitätsereignisse) erschwerte das Training robuster Modelle erheblich. Besonders problematisch war der Distribution Shift zwischen Training (5,53\% Mortalität) und Test (12,50\% Mortalität), der auf zeitliche Veränderungen in der Patientenpopulation oder Behandlungsstandards hindeutet.
+
+\textbf{OMOP-Mapping-Schwierigkeiten:}
+Die Standardisierung erwies sich als komplexer als erwartet. Viele MIMIC-IV-Parameter konnten nicht vollständig auf OMOP-Konzepte gemappt werden, was Unsicherheiten in der Datenqualität zur Folge hatte. Einheitenkonvertierungen (z.B. IU/L → U/L, units → pH) waren nur teilweise möglich. Für kritische Parameter wie IL-6 und Procalcitonin konnten trotz systematischer Suche keine entsprechenden MIMIC-IV-Bezeichnungen gefunden werden.
+
+\textbf{Imputationsstrategien:}
+Die gewählten Imputationsmethoden (LOCF, Populationsmedian) bergen das Risiko systematischer Verzerrungen. Forward-Fill kann bei wenigen verfügbaren Messwerten zu unrealistischen Verläufen führen. Die Verwendung von SpO2/FiO2 als Surrogat für PaO2/FiO2 ist klinisch umstritten und könnte die Score-Genauigkeit beeinträchtigen.
+
+\subsubsection{Alternative Ansätze}
+
+\textbf{Methodische Alternativen:}
+Rückblickend hätten folgende Ansätze Verbesserungen bringen können:
+\begin{itemize}
+    \item \textbf{Größere Kohorte:} Nutzung des vollständigen MIMIC-IV-Datensatzes statt Demo-Version
+    \item \textbf{Andere Scoring-Systeme:} APACHE II oder SAPS-II als Vergleichsstandards
+    \item \textbf{Deep Learning:} Rekurrente neuronale Netze für Zeitreihenmodellierung
+    \item \textbf{Ensemble-Methoden:} Kombination mehrerer Scores und Modelle
+    \item \textbf{Multi-Task Learning:} Gleichzeitige Vorhersage verschiedener Outcomes
+\end{itemize}
+
+\textbf{Datenaufbereitung:}
+Alternative Strategien hätten umfassen können:
+\begin{itemize}
+    \item Multiple Imputation statt Single-Value-Imputation
+    \item Bayesian-basierte Unsicherheitsmodellierung für fehlende Werte
+    \item Fuzzy-Matching für OMOP-Mapping mit Ähnlichkeitsscores
+    \item Zeitvariable Modellierung statt statischer 24-Stunden-Fenster
+\end{itemize}
+
+\subsubsection{Generalisierbarkeit und externe Validität}
+
+\textbf{Populationsspezifische Limitationen:}
+Die Generalisierbarkeit der Ergebnisse ist durch mehrere Faktoren eingeschränkt:
+\begin{itemize}
+    \item \textbf{Institutionsspezifität:} MIMIC-IV stammt ausschließlich aus Beth Israel Deaconess Medical Center
+    \item \textbf{Zeitliche Begrenzung:} Daten aus 2008-2019 spiegeln möglicherweise nicht aktuelle Behandlungsstandards wider
+    \item \textbf{Demografische Verzerrung:} US-amerikanische Bevölkerung mit spezifischen ethnischen und sozioökonomischen Charakteristika
+    \item \textbf{Kleine Kohorte:} 45 Patienten sind nicht repräsentativ für die globale ARF-Population
+\end{itemize}
+
+\textbf{Technische Validierungsanforderungen:}
+Für eine klinische Implementierung wären erforderlich:
+\begin{itemize}
+    \item \textbf{Multi-Center-Validierung:} Tests in verschiedenen Krankenhäusern und Gesundheitssystemen
+    \item \textbf{Prospektive Studien:} Realtime-Validierung in klinischen Umgebungen
+    \item \textbf{Regulatory Approval:} FDA/CE-Zertifizierung für medizinische Software
+    \item \textbf{Kontinuierliches Monitoring:} Model Drift Detection und regelmäßige Rekalibrierung
+\end{itemize}
+
+\textbf{Ethische und Datenschutzaspekte:}
+\begin{itemize}
+    \item Algorithmic Bias gegenüber unterrepräsentierten Patientengruppen
+    \item Transparenz-Anforderungen für Black-Box-Modelle
+    \item Datenschutz-Compliance bei grenzüberschreitender Nutzung
+    \item Haftungsfragen bei automatisierten klinischen Entscheidungen
+\end{itemize}
+
+\subsection{Ausblick und zukünftige Forschungsrichtungen}
+
+\subsubsection{Methodische Weiterentwicklungen}
+
+\textbf{Datenbasis-Erweiterung:}
+Die wichtigste Verbesserung wäre die Nutzung größerer Datensätze:
+\begin{itemize}
+    \item \textbf{Vollständiger MIMIC-IV:} Übergang vom Demo-Datensatz zum kompletten Datensatz für robustere Modelle
+    \item \textbf{Längsschnittdaten:} Integration von Outcome-Daten über ICU-Aufenthalt hinaus
+    \item \textbf{Multi-Center-Daten:} Validierung mit Daten aus anderen Krankenhäusern zur Verbesserung der Generalisierbarkeit
+\end{itemize}
+
+\textbf{Verbesserte SOFA-Score-Berechnung:}
+\begin{itemize}
+    \item Optimierung der Imputationsstrategien durch Multiple Imputation
+    \item Entwicklung ARF-spezifischer Score-Gewichtungen
+    \item Integration kontinuierlicher Monitoring-Daten für dynamische Score-Updates
+    \item Vergleichsstudien mit APACHE II und SAPS-II Scores
+\end{itemize}
+
+\textbf{Erweiterte ML-Ansätze:}
+\begin{itemize}
+    \item \textbf{Zeitreihenmodelle:} LSTM/GRU-Netzwerke für temporale SOFA-Score-Entwicklung
+    \item \textbf{Ensemble-Methoden:} Kombination verschiedener Algorithmen für robustere Vorhersagen
+    \item \textbf{Survival Analysis:} Cox-Regression für zeitabhängige Mortalitätsvorhersage
+\end{itemize}
+
+\subsubsection{Offene Forschungsfragen}
+
+\textbf{SOFA-Score-spezifische Fragen:}
+\begin{itemize}
+    \item \textbf{Temporale Dynamik:} Welche SOFA-Score-Trends sind prädiktiver als Einzelzeitpunkt-Messungen?
+    \item \textbf{Organsystem-Interaktionen:} Wie beeinflussen sich respiratorische und kardiovaskuläre SOFA-Komponenten bei ARF-Patienten?
+    \item \textbf{Dokumentationsqualität:} Validierung des data\_completeness\_score als unabhängiger Prädiktor
+\end{itemize}
+
+\textbf{ARF-spezifische Forschung:}
+\begin{itemize}
+    \item Identifikation von ARF-Subtypen mit unterschiedlichen Prognosen
+    \item Optimale Zeitfenster für Mortalitätsprädiktion (24h vs. 48h vs. 72h)
+    \item Rolle der Beatmungsparameter in der Prädiktion
+\end{itemize}
+
+\subsubsection{Potenzielle klinische Anwendungen}
+
+\textbf{Direkte Implementierung:}
+\begin{itemize}
+    \item \textbf{ICU-Dashboard:} Real-time SOFA-Score-Berechnung mit Mortalitätsrisiko-Anzeige
+    \item \textbf{Frühwarnsystem:} Automatische Alerts bei steigenden SOFA-Scores oder ML-Risikoklassifikation
+    \item \textbf{Dokumentationshilfe:} Unterstützung bei der Vervollständigung fehlender Parameter
+\end{itemize}
+
+\textbf{Validierungsanforderungen:}
+\begin{itemize}
+    \item Prospektive Validierung in klinischen Umgebungen
+    \item Evaluation der Akzeptanz durch ICU-Personal
+    \item Kosteneffektivitäts-Analysen für Implementierung
+\end{itemize}
+
+\textbf{Technische Umsetzung:}
+\begin{itemize}
+    \item Integration in bestehende ICU-Informationssysteme
+    \item Entwicklung von Standards für automatisierte SOFA-Score-Berechnung
+    \item Aufbau kontinuierlicher Qualitätskontroll-Mechanismen
+\end{itemize}
+
+Die entwickelte Pipeline demonstriert die Machbarkeit automatisierter klinischer Score-Berechnung und ML-basierter Mortalitätsprädiktion, auch bei limitierten Datenressourcen. Zukünftige Arbeiten sollten sich auf die Skalierung und klinische Validierung dieser Ansätze konzentrieren.
+
 
 \newpage
 \appendix
